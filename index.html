@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>工程表作成</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">WORK SCHEDULER</p>
+      <h1>工程表作成</h1>
+    </div>
+
+    <button
+      id="makeScheduleTop"
+      class="primary desktop"
+      type="button"
+    >
+      工程表を作成
+    </button>
+  </header>
+
+  <main class="container">
+    <section class="panel">
+      <div class="section-head">
+        <div>
+          <h2>全体設定</h2>
+          <p>作業時間とメンバーを入力します</p>
+        </div>
+      </div>
+
+      <div class="overall-time">
+        <label>
+          <span>開始日時</span>
+          <input
+            id="workStart"
+            type="text"
+            inputmode="numeric"
+            placeholder="2026-09-03 07:00"
+          >
+        </label>
+
+        <label>
+          <span>終了日時</span>
+          <input
+            id="workEnd"
+            type="text"
+            inputmode="numeric"
+            placeholder="2026-09-03 20:00"
+          >
+        </label>
+      </div>
+
+      <div class="sub-head">
+        <h3>メンバー</h3>
+
+        <button
+          id="addMember"
+          class="secondary"
+          type="button"
+        >
+          ＋ メンバーを追加
+        </button>
+      </div>
+
+      <div id="memberList" class="stack"></div>
+    </section>
+
+    <section class="task-section">
+      <div class="section-head">
+        <div>
+          <h2>作業カード</h2>
+          <p>
+            上にあるカードほど優先度が高く、
+            開始日時なしの作業は空き時間へ配置します
+          </p>
+        </div>
+
+        <button
+          id="addTask"
+          class="secondary dark"
+          type="button"
+        >
+          ＋ 作業を追加
+        </button>
+      </div>
+
+      <div id="taskList" class="task-grid"></div>
+    </section>
+
+    <section id="resultSection" class="panel">
+      <div class="section-head">
+        <div>
+          <h2>工程表</h2>
+          <p id="resultMessage">
+            「工程表を作成」を押すと表示されます
+          </p>
+        </div>
+
+        <button
+          id="printSchedule"
+          class="secondary print-button"
+          type="button"
+        >
+          工程表を印刷
+        </button>
+      </div>
+
+      <div id="resultArea" class="result-scroll">
+        <div class="empty">
+          工程表はまだありません
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div class="mobile-action">
+    <button
+      id="makeScheduleBottom"
+      class="primary"
+      type="button"
+    >
+      工程表を作成
+    </button>
+  </div>
+
+  <div
+    id="toast"
+    class="toast"
+    role="status"
+    aria-live="polite"
+  ></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
