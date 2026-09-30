@@ -1,1898 +1,4115 @@
-const STEP=15,STORE="work-scheduler-v2";
-const COLORS=["#17a9df","#18b777","#ffc21a","#ac8ee6","#f28d75","#75b95b","#e99ac2"];
+let STEP = 15;
+const STORE = "work-scheduler-v2";
+let scheduleStep = { value: 15, unit: "minute" };
 
-let members=[
-member("A","一般"),
-member("B","一般"),
-member("C","一般")
+const COLORS = [
+  "#17a9df",
+  "#18b777",
+  "#ffc21a",
+  "#ac8ee6",
+  "#f28d75",
+  "#75b95b",
+  "#e99ac2",
 ];
 
-let tasks=[
-task("作業1",480,2,""),
-task("作業2",240,2,""),
-task("作業3",120,1,"")
+let baseAvailability = {
+  start: "07:00",
+  end: "20:00",
+};
+
+let members = [
+  member("A", "一般"),
+  member("B", "一般"),
+  member("C", "一般"),
 ];
 
-let draggedTaskId=null;
+let tasks = [
+  task("作業1", 480, 2, ""),
+  task("作業2", 240, 2, ""),
+  task("作業3", 120, 1, ""),
+];
 
-const $=id=>document.getElementById(id);
-const startEl=$("workStart");
-const endEl=$("workEnd");
-const memberList=$("memberList");
-const taskList=$("taskList");
-const resultArea=$("resultArea");
-const resultMessage=$("resultMessage");
+let draggedTaskId = null;
+
+const $ = (id) => document.getElementById(id);
+
+const startEl = $("workStart");
+const endEl = $("workEnd");
+const memberList = $("memberList");
+const taskList = $("taskList");
+const resultArea = $("resultArea");
+const resultMessage = $("resultMessage");
+const stepValueEl = $("scheduleStepValue");
+const stepUnitEl = $("scheduleStepUnit");
+
+function revealAddedItem(selector) {
+  requestAnimationFrame(() => {
+    const target = document.querySelector(selector);
+
+    if (!target) {
+      return;
+    }
+
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    const input = target.querySelector(
+      'input:not([type="hidden"]), select, textarea',
+    );
+
+    if (input) {
+      window.setTimeout(() => {
+        input.focus({
+          preventScroll: true,
+        });
+      }, 350);
+    }
+  });
+}
 
 setDefaultDateTimes();
 load();
+syncStepInputs();
+enhanceOverallDateTimeInputs();
+initializeMemberAvailability();
 render();
+setupBaseAvailabilitySettings();
+refreshForStepUnit();
 
-$("addMember").onclick=()=>{
-members.push(member());
-save();
-render();
+$("addMember").onclick = () => {
+  const newMember = member();
+
+  newMember.availability = baseAvailabilityForPeriod();
+
+  members.push(newMember);
+
+  save();
+  render();
+
+  revealAddedItem("#memberList .member-card:last-child");
 };
 
-$("addTask").onclick=()=>{
-const newTask=task();
-newTask.color=COLORS[tasks.length%COLORS.length];
-tasks.push(newTask);
-save();
-renderTasks();
+$("addTask").onclick = () => {
+  const newTask = task();
+
+  newTask.color = COLORS[tasks.length % COLORS.length];
+
+  tasks.push(newTask);
+
+  save();
+  renderTasks();
+
+  revealAddedItem("#taskList .task-card:last-child");
 };
 
-$("makeScheduleTop").onclick=makeSchedule;
-$("makeScheduleBottom").onclick=makeSchedule;
+$("makeScheduleTop").onclick = makeSchedule;
+$("makeScheduleBottom").onclick = makeSchedule;
 
-const printButton=$("printSchedule");
-
-if(printButton){
-printButton.onclick=()=>{
-if(!resultArea.querySelector(".schedule")){
-toast("先に工程表を作成してください");
-return;
-}
-window.print();
-};
-}
-
-startEl.onchange=()=>{
-startEl.value=normalizeDateTime(startEl.value);
-save();
+$("addMemberTop").onclick = () => {
+  $("addMember").click();
 };
 
-endEl.onchange=()=>{
-endEl.value=normalizeDateTime(endEl.value);
-save();
+$("addTaskTop").onclick = () => {
+  $("addTask").click();
 };
 
-function id(){
-return Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const printButton = $("printSchedule");
+
+if (printButton) {
+  printButton.onclick = () => {
+    if (resultArea.querySelector(".schedule")) {
+      window.print();
+    } else {
+      toast("先に工程表を作成してください");
+    }
+  };
 }
 
-function member(name="",skills=""){
-return{
-id:id(),
-name,
-skills,
-breaks:[]
-};
-}
-
-function task(name="",minutes=60,people=1,skill=""){
-return{
-id:id(),
-name,
-minutes,
-start:"",
-people,
-skill,
-before:"",
-interruptible:true,
-shareable:false,
-color:""
-};
-}
-
-function render(){
-renderMembers();
-renderTasks();
-}
-
-function renderMembers(){
-memberList.innerHTML="";
-
-members.forEach(currentMember=>{
-const card=el("article","member-card");
-const main=el("div","member-main");
-
-main.append(
-textField(
-"名前",
-currentMember.name,
-value=>{
-currentMember.name=value;
-}
-),
-textField(
-"専門（複数は読点・カンマ区切り）",
-currentMember.skills,
-value=>{
-currentMember.skills=value;
-},
-"",
-renderTasks
-),
-button(
-"削除",
-"delete",
-()=>{
-members=members.filter(item=>item.id!==currentMember.id);
-save();
-render();
-}
-)
-);
-
-const box=el("div","break-box");
-const head=el("div","break-head");
-
-head.innerHTML="<strong>休憩時間</strong>";
-
-head.append(
-button(
-"＋ 休憩を追加",
-"small",
-()=>{
-currentMember.breaks.push({
-id:id(),
-start:dateTimeOnWorkDate("12:00"),
-end:dateTimeOnWorkDate("13:00")
-});
-save();
-renderMembers();
-}
-)
-);
-
-const list=el("div","break-list");
-
-if(!currentMember.breaks.length){
-list.innerHTML='<p class="muted">休憩なし</p>';
-}
-
-currentMember.breaks.forEach(breakItem=>{
-const row=el("div","break-row");
-
-row.append(
-timeInput(
-breakItem.start,
-value=>{
-breakItem.start=value;
-},
-"休憩開始"
-),
-span("～","dash"),
-timeInput(
-breakItem.end,
-value=>{
-breakItem.end=value;
-},
-"休憩終了"
-),
-button(
-"削除",
-"delete",
-()=>{
-currentMember.breaks=currentMember.breaks.filter(
-item=>item.id!==breakItem.id
-);
-save();
-renderMembers();
-}
-)
-);
-
-list.append(row);
-});
-
-box.append(head,list);
-card.append(main,box);
-memberList.append(card);
-});
-}
-
-function renderTasks(){
-taskList.innerHTML="";
-
-tasks.forEach((currentTask,index)=>{
-currentTask.color=currentTask.color||COLORS[index%COLORS.length];
-
-const card=el("article","task-card");
-card.style.setProperty("--card-color",currentTask.color);
-
-const accent=el("div","accent");
-const body=el("div","task-body");
-const head=el("div","card-head");
-
-head.innerHTML=`<p>優先順位 ${index+1}</p>`;
-
-const actions=el("div","card-actions");
-
-const upButton=button(
-"↑",
-"order-button",
-()=>{
-moveTask(currentTask.id,-1);
-}
-);
-
-const downButton=button(
-"↓",
-"order-button",
-()=>{
-moveTask(currentTask.id,1);
-}
-);
-
-const handle=span("↕","drag-handle");
-
-upButton.disabled=index===0;
-downButton.disabled=index===tasks.length-1;
-
-upButton.title="優先順位を上げる";
-downButton.title="優先順位を下げる";
-handle.title="ドラッグして並べ替え";
-handle.draggable=true;
-
-handle.addEventListener("dragstart",event=>{
-draggedTaskId=currentTask.id;
-card.classList.add("dragging");
-event.dataTransfer.effectAllowed="move";
-event.dataTransfer.setData("text/plain",currentTask.id);
-});
-
-handle.addEventListener("dragend",()=>{
-draggedTaskId=null;
-
-document.querySelectorAll(".task-card").forEach(item=>{
-item.classList.remove("dragging","drag-over");
-});
-});
-
-card.addEventListener("dragover",event=>{
-event.preventDefault();
-
-if(draggedTaskId&&draggedTaskId!==currentTask.id){
-card.classList.add("drag-over");
-}
-});
-
-card.addEventListener("dragleave",()=>{
-card.classList.remove("drag-over");
-});
-
-card.addEventListener("drop",event=>{
-event.preventDefault();
-card.classList.remove("drag-over");
-
-const sourceId=
-draggedTaskId||
-event.dataTransfer.getData("text/plain");
-
-const placeAfter=
-event.clientY>
-card.getBoundingClientRect().top+
-card.offsetHeight/2;
-
-reorderTask(
-sourceId,
-currentTask.id,
-placeAfter
-);
-});
-
-actions.append(
-upButton,
-downButton,
-handle,
-button(
-"削除",
-"delete",
-()=>{
-const deletedId=currentTask.id;
-
-tasks=tasks.filter(item=>item.id!==deletedId);
-
-tasks.forEach(item=>{
-if(item.before===deletedId){
-item.before="";
-}
-});
-
-save();
-renderTasks();
-}
-)
-);
-
-head.append(actions);
-
-const fields=el("div","fields");
-
-fields.append(
-textField(
-"作業名",
-currentTask.name,
-value=>{
-currentTask.name=value;
-},
-"wide"
-),
-numberField(
-"所要時間（分）",
-currentTask.minutes,
-value=>{
-currentTask.minutes=value;
-}
-),
-optionalTime(
-"開始日時（任意）",
-currentTask.start,
-value=>{
-currentTask.start=value;
-}
-),
-numberField(
-"必要人数（最低人数）",
-currentTask.people,
-value=>{
-currentTask.people=value;
-}
-),
-skillField(currentTask),
-beforeField(currentTask),
-checkField(
-"中断可能",
-currentTask.interruptible,
-value=>{
-currentTask.interruptible=value;
-}
-),
-checkField(
-"分担可能（空き人員も参加）",
-currentTask.shareable,
-value=>{
-currentTask.shareable=value;
-}
-)
-);
-
-body.append(head,fields);
-card.append(accent,body);
-taskList.append(card);
-});
-}
-
-function textField(title,value,setValue,extraClass="",commitFunction=null){
-const field=el("label",extraClass);
-field.append(label(title));
-
-const input=document.createElement("input");
-input.type="text";
-input.value=value;
-
-input.oninput=()=>{
-setValue(input.value);
-save();
+startEl.onchange = () => {
+  startEl.value = normalizeDateTime(startEl.value);
+  save();
 };
 
-if(commitFunction){
-input.onchange=commitFunction;
-}
-
-field.append(input);
-return field;
-}
-
-function numberField(title,value,setValue){
-const field=el("label");
-field.append(label(title));
-
-const input=document.createElement("input");
-input.type="number";
-input.min="1";
-input.step="1";
-input.value=value;
-
-input.oninput=()=>{
-const number=Math.max(
-1,
-Math.round(Number(input.value)||1)
-);
-
-setValue(number);
-save();
+endEl.onchange = () => {
+  endEl.value = normalizeDateTime(endEl.value);
+  save();
 };
 
-field.append(input);
-return field;
-}
-
-function optionalTime(title,value,setValue){
-const field=el("label");
-field.append(label(title));
-
-const input=dateTextInput(
-value,
-setValue,
-"開始日時"
-);
-
-field.append(input);
-return field;
-}
-
-function timeInput(value,setValue,ariaLabel){
-return dateTextInput(
-value,
-setValue,
-ariaLabel
-);
-}
-
-function dateTextInput(value,setValue,ariaLabel){
-const input=document.createElement("input");
-
-input.type="text";
-input.inputMode="numeric";
-input.placeholder="2026-09-03 09:00";
-input.value=normalizeDateTime(value);
-input.setAttribute("aria-label",ariaLabel);
-
-input.onchange=()=>{
-input.value=normalizeDateTime(input.value);
-setValue(input.value);
-save();
-};
-
-return input;
-}
-
-function skillField(currentTask){
-const field=el("label");
-
-field.append(
-label("専門性（複数選択可）")
-);
-
-const select=document.createElement("select");
-
-select.multiple=true;
-select.className="skill-select";
-
-const skillList=[
-...new Set(
-members.flatMap(currentMember=>
-skills(currentMember.skills)
-)
-)
-];
-
-const selectedSkills=skills(currentTask.skill);
-
-const none=document.createElement("option");
-none.value="";
-
-none.textContent=
-skillList.length
-?"指定なし（選択を解除）"
-:"メンバーの専門を先に入力";
-
-none.selected=!selectedSkills.length;
-
-if(!skillList.length){
-none.disabled=true;
-}
-
-select.append(none);
-
-selectedSkills
-.filter(value=>!skillList.includes(value))
-.forEach(value=>{
-const option=document.createElement("option");
-
-option.value=value;
-option.textContent=value+"（未登録）";
-option.selected=true;
-
-select.append(option);
-});
-
-skillList.forEach(value=>{
-const option=document.createElement("option");
-
-option.value=value;
-option.textContent=value;
-option.selected=selectedSkills.includes(value);
-
-select.append(option);
-});
-
-select.size=Math.min(
-Math.max(skillList.length+1,2),
-5
-);
-
-select.onchange=()=>{
-const selectedValues=[
-...select.selectedOptions
-]
-.map(option=>option.value)
-.filter(Boolean);
-
-currentTask.skill=selectedValues.join("、");
-none.selected=!selectedValues.length;
-
-save();
-};
-
-field.append(select);
-return field;
-}
-
-function beforeField(currentTask){
-const field=el("label");
-
-field.append(
-label("前工程（任意）")
-);
-
-const select=document.createElement("select");
-
-select.innerHTML=
-'<option value="">なし</option>';
-
-tasks
-.filter(item=>item.id!==currentTask.id)
-.forEach(item=>{
-const option=document.createElement("option");
-
-option.value=item.id;
-option.textContent=item.name||"名称未入力";
-option.selected=currentTask.before===item.id;
-
-select.append(option);
-});
-
-select.onchange=()=>{
-currentTask.before=select.value;
-save();
-};
-
-field.append(select);
-return field;
-}
-
-function checkField(title,value,setValue){
-const field=el("label","check-field");
-const text=span(title,"label");
-const input=document.createElement("input");
-
-input.type="checkbox";
-input.checked=value;
-
-input.onchange=()=>{
-setValue(input.checked);
-save();
-};
-
-field.append(text,input);
-return field;
-}
-
-function el(tagName,className=""){
-const element=document.createElement(tagName);
-
-if(className){
-element.className=className;
-}
-
-return element;
-}
-
-function span(text,className=""){
-const element=el("span",className);
-element.textContent=text;
-return element;
-}
-
-function label(text){
-return span(text);
-}
-
-function button(text,className,clickFunction){
-const element=el("button",className);
-
-element.type="button";
-element.textContent=text;
-element.onclick=clickFunction;
-
-return element;
-}
-
-function moveTask(taskId,direction){
-const from=tasks.findIndex(
-currentTask=>currentTask.id===taskId
-);
-
-const to=from+direction;
-
-if(
-from<0||
-to<0||
-to>=tasks.length
-){
-return;
-}
-
-const[movedTask]=tasks.splice(from,1);
-
-tasks.splice(to,0,movedTask);
-
-save();
-renderTasks();
-}
-
-function reorderTask(sourceId,targetId,placeAfter){
-if(!sourceId||sourceId===targetId){
-return;
-}
-
-const from=tasks.findIndex(
-currentTask=>currentTask.id===sourceId
-);
-
-if(
-from<0||
-!tasks.some(
-currentTask=>currentTask.id===targetId
-)
-){
-return;
-}
-
-const[movedTask]=tasks.splice(from,1);
-
-const target=tasks.findIndex(
-currentTask=>currentTask.id===targetId
-);
-
-tasks.splice(
-target+(placeAfter?1:0),
-0,
-movedTask
-);
-
-save();
-renderTasks();
-}
-
-function makeSchedule(){
-save();
-
-const begin=toMin(startEl.value);
-const finish=toMin(endEl.value);
-
-const activeMembers=members.filter(
-currentMember=>currentMember.name.trim()
-);
-
-const activeTasks=tasks.filter(
-currentTask=>currentTask.name.trim()
-);
-
-if(
-begin===null||
-finish===null||
-finish<=begin
-){
-toast(
-"全体の開始・終了日時を確認してください"
-);
-return;
-}
-
-if(!activeMembers.length){
-toast(
-"メンバーを1人以上入力してください"
-);
-return;
-}
-
-if(!activeTasks.length){
-toast(
-"作業を1件以上入力してください"
-);
-return;
-}
-
-if((finish-begin)%STEP){
-toast(
-"全体の時刻は15分単位で設定してください"
-);
-return;
-}
-
-for(const currentMember of activeMembers){
-for(const breakItem of currentMember.breaks){
-const breakStart=toMin(breakItem.start);
-const breakEnd=toMin(breakItem.end);
-
-if(
-breakStart===null||
-breakEnd===null
-){
-toast(
-`${currentMember.name}さんの休憩日時は「2026-09-03 12:00」の形式で入力してください`
-);
-return;
-}
-
-if(
-breakEnd<=breakStart||
-breakStart<begin||
-breakEnd>finish
-){
-toast(
-`${currentMember.name}さんの休憩日時を全体時間内で確認してください`
-);
-return;
-}
-
-if(
-(breakStart-begin)%STEP||
-(breakEnd-begin)%STEP
-){
-toast(
-`${currentMember.name}さんの休憩を15分単位で設定してください`
-);
-return;
-}
-}
-}
-
-for(const currentTask of activeTasks){
-if(!currentTask.start){
-continue;
-}
-
-const taskStart=toMin(currentTask.start);
-
-if(taskStart===null){
-toast(
-`${currentTask.name}の開始日時は「2026-09-03 09:00」の形式で入力してください`
-);
-return;
-}
-
-if((taskStart-begin)%STEP){
-toast(
-`${currentTask.name}の開始時刻は15分単位で設定してください`
-);
-return;
-}
-}
-
-const result=createSchedule(
-activeTasks,
-activeMembers,
-begin,
-finish
-);
-
-draw(
-result,
-activeMembers,
-begin
-);
-
-$("resultSection").scrollIntoView({
-behavior:"smooth",
-block:"start"
-});
-}
-
-function createSchedule(activeTasks,activeMembers,begin,finish){
-const slotCount=(finish-begin)/STEP;
-
-const cells=Object.fromEntries(
-activeMembers.map(currentMember=>[
-currentMember.id,
-Array(slotCount).fill(null)
-])
-);
-
-const completed={};
-const failed=[];
-const visiting=new Set();
-
-activeMembers.forEach(currentMember=>{
-currentMember.breaks.forEach(breakItem=>{
-const startSlot=
-(toMin(breakItem.start)-begin)/STEP;
-
-const endSlot=
-(toMin(breakItem.end)-begin)/STEP;
-
-for(
-let slot=startSlot;
-slot<endSlot;
-slot++
-){
-cells[currentMember.id][slot]={
-type:"break"
-};
-}
-});
-});
-
-const tasksById=Object.fromEntries(
-activeTasks.map(currentTask=>[
-currentTask.id,
-currentTask
-])
-);
-
-function place(currentTask,deadline=slotCount){
-if(completed[currentTask.id]){
-return completed[currentTask.id];
-}
-
-if(visiting.has(currentTask.id)){
-addFailure(
-currentTask,
-"前工程が循環しています"
-);
-return null;
-}
-
-visiting.add(currentTask.id);
-
-let earliest=0;
-
-if(currentTask.before){
-const previousTask=tasksById[currentTask.before];
-
-if(!previousTask){
-addFailure(
-currentTask,
-"前工程が見つかりません"
-);
-
-visiting.delete(currentTask.id);
-return null;
-}
-
-const previousDeadline=currentTask.start
-?(toMin(currentTask.start)-begin)/STEP
-:deadline;
-
-const previousResult=place(
-previousTask,
-previousDeadline
-);
-
-if(!previousResult){
-addFailure(
-currentTask,
-"前工程を配置できません"
-);
-
-visiting.delete(currentTask.id);
-return null;
-}
-
-earliest=previousResult.end;
-}
-
-const requiredSkills=skills(currentTask.skill);
-
-const missingSkills=requiredSkills.filter(
-requiredSkill=>{
-return !activeMembers.some(
-currentMember=>{
-return skills(
-currentMember.skills
-).includes(requiredSkill);
-}
-);
-}
-);
-
-if(missingSkills.length){
-addFailure(
-currentTask,
-`専門「${missingSkills.join("、")}」を持つメンバーがいません`
-);
-
-visiting.delete(currentTask.id);
-return null;
-}
-
-const eligibleMembers=activeMembers;
-
-const fixedSlot=currentTask.start
-?(toMin(currentTask.start)-begin)/STEP
-:null;
-
-if(
-fixedSlot!==null&&
-(
-fixedSlot<0||
-fixedSlot>=slotCount
-)
-){
-addFailure(
-currentTask,
-"開始日時が全体の時間外です"
-);
-
-visiting.delete(currentTask.id);
-return null;
-}
-
-if(
-fixedSlot!==null&&
-fixedSlot<earliest
-){
-addFailure(
-currentTask,
-"開始日時が前工程の完了より前です"
-);
-
-visiting.delete(currentTask.id);
-return null;
-}
-
-const plan=currentTask.shareable
-?planShareable(
-currentTask,
-eligibleMembers,
-cells,
-fixedSlot??earliest,
-deadline,
-fixedSlot!==null
-)
-:planTogether(
-currentTask,
-eligibleMembers,
-cells,
-fixedSlot??earliest,
-deadline,
-fixedSlot!==null
-);
-
-if(!plan){
-addFailure(
-currentTask,
-"必要な人数、専門性、または時間枠を確保できません"
-);
-
-visiting.delete(currentTask.id);
-return null;
-}
-
-plan.parts.forEach(part=>{
-for(
-let slot=part.start;
-slot<part.end;
-slot++
-){
-cells[part.memberId][slot]={
-type:"task",
-task:currentTask
-};
-}
-});
-
-completed[currentTask.id]={
-...plan,
-task:currentTask
-};
-
-visiting.delete(currentTask.id);
-
-return completed[currentTask.id];
-}
-
-function addFailure(currentTask,reason){
-const exists=failed.some(
-item=>item.task.id===currentTask.id
-);
-
-if(!exists){
-failed.push({
-task:currentTask,
-reason
-});
-}
-}
-
-activeTasks
-.filter(currentTask=>currentTask.start)
-.sort(
-(first,second)=>
-toMin(first.start)-toMin(second.start)
-)
-.forEach(currentTask=>{
-place(currentTask);
-});
-
-activeTasks
-.filter(currentTask=>!currentTask.start)
-.forEach(currentTask=>{
-place(currentTask);
-});
-
-return{
-cells,
-done:Object.values(completed),
-failed,
-slotCount
-};
-}
-
-function planTogether(currentTask,eligibleMembers,cells,fromSlot,deadline,fixedStart){
-const requiredPeople=Math.max(
-1,
-Number(currentTask.people)
-);
-
-const requiredSlots=Math.ceil(
-Number(currentTask.minutes)/STEP
-);
-
-if(eligibleMembers.length<requiredPeople){
-return null;
-}
-
-const groups=combinations(
-eligibleMembers,
-requiredPeople
-).filter(group=>{
-return coversSkills(
-group,
-currentTask.skill
-);
-});
-
-for(const group of groups){
-const possibleStarts=fixedStart
-?[fromSlot]
-:Array.from(
-{
-length:Math.max(
-0,
-deadline-fromSlot
-)
-},
-(_,index)=>fromSlot+index
-);
-
-for(const startSlot of possibleStarts){
-let usedSlots=[];
-
-if(currentTask.interruptible){
-for(
-let slot=startSlot;
-slot<deadline&&
-usedSlots.length<requiredSlots;
-slot++
-){
-const allFree=group.every(
-currentMember=>
-!cells[currentMember.id][slot]
-);
-
-if(allFree){
-usedSlots.push(slot);
-}
-}
-}else{
-usedSlots=Array.from(
-{length:requiredSlots},
-(_,index)=>startSlot+index
-);
-
-const outside=
-usedSlots.at(-1)>=deadline;
-
-const occupied=usedSlots.some(
-slot=>group.some(
-currentMember=>
-cells[currentMember.id][slot]
-)
-);
-
-if(outside||occupied){
-continue;
-}
-}
-
-if(
-usedSlots.length<requiredSlots||
-usedSlots[0]!==startSlot
-){
-continue;
-}
-
-const parts=[];
-
-group.forEach(currentMember=>{
-ranges(usedSlots).forEach(
-currentRange=>{
-parts.push({
-memberId:currentMember.id,
-...currentRange
-});
-}
-);
-});
-
-return{
-parts,
-start:startSlot,
-end:usedSlots.at(-1)+1
-};
-}
-}
-
-return null;
-}
-
-function planShareable(currentTask,eligibleMembers,cells,fromSlot,deadline,fixedStart){
-const minimumPeople=Math.max(
-1,
-Number(currentTask.people)
-);
-
-const requiredWork=Math.ceil(
-Number(currentTask.minutes)/STEP
-)*minimumPeople;
-
-const possibleStarts=fixedStart
-?[fromSlot]
-:Array.from(
-{
-length:Math.max(
-0,
-deadline-fromSlot
-)
-},
-(_,index)=>fromSlot+index
-);
-
-if(eligibleMembers.length<minimumPeople){
-return null;
-}
-
-for(const startSlot of possibleStarts){
-let workLeft=requiredWork;
-const used={};
-let started=false;
-let hadGap=false;
-let lastSlot=startSlot-1;
-let actualStart=null;
-
-for(
-let slot=startSlot;
-slot<deadline&&workLeft>0;
-slot++
-){
-const availableMembers=eligibleMembers.filter(
-currentMember=>
-!cells[currentMember.id][slot]
-);
-
-const canWork=
-availableMembers.length>=minimumPeople&&
-coversSkills(
-availableMembers,
-currentTask.skill
-);
-
-if(!canWork){
-if(
-slot===startSlot&&
-fixedStart
-){
-break;
-}
-
-if(started){
-hadGap=true;
-}
-
-if(
-!currentTask.interruptible&&
-started
-){
-break;
-}
-
-continue;
-}
-
-if(
-slot===startSlot||
-started||
-!fixedStart
-){
-if(
-!currentTask.interruptible&&
-hadGap
-){
-break;
-}
-
-if(!started){
-actualStart=slot;
-}
-
-const desiredPeople=Math.min(
-availableMembers.length,
-Math.max(
-minimumPeople,
-workLeft
-)
-);
-
-const workers=chooseWorkers(
-availableMembers,
-desiredPeople,
-currentTask.skill
-);
-
-if(!workers){
-if(
-fixedStart&&
-slot===startSlot
-){
-break;
-}
-
-continue;
-}
-
-started=true;
-
-workers.forEach(currentMember=>{
-if(!used[currentMember.id]){
-used[currentMember.id]=[];
-}
-
-used[currentMember.id].push(slot);
-});
-
-workLeft-=workers.length;
-lastSlot=slot;
-}
-}
-
-if(
-workLeft<=0&&
-started
-){
-const parts=[];
-
-Object.entries(used).forEach(
-([memberId,usedSlots])=>{
-ranges(usedSlots).forEach(
-currentRange=>{
-parts.push({
-memberId,
-...currentRange
-});
-}
-);
-}
-);
-
-return{
-parts,
-start:actualStart,
-end:lastSlot+1
-};
-}
-}
-
-return null;
-}
-
-function ranges(slots){
-const output=[];
-
-if(!slots.length){
-return output;
-}
-
-let rangeStart=slots[0];
-let rangeEnd=rangeStart+1;
-
-for(
-let index=1;
-index<slots.length;
-index++
-){
-if(slots[index]===rangeEnd){
-rangeEnd++;
-}else{
-output.push({
-start:rangeStart,
-end:rangeEnd
-});
-
-rangeStart=slots[index];
-rangeEnd=rangeStart+1;
-}
-}
-
-output.push({
-start:rangeStart,
-end:rangeEnd
-});
-
-return output;
-}
-
-function combinations(items,count){
-const output=[];
-
-function select(startIndex,selectedItems){
-if(selectedItems.length===count){
-output.push([...selectedItems]);
-return;
-}
-
-for(
-let index=startIndex;
-index<=
-items.length-
-(count-selectedItems.length);
-index++
-){
-selectedItems.push(items[index]);
-select(index+1,selectedItems);
-selectedItems.pop();
-}
-}
-
-select(0,[]);
-
-return output;
-}
-
-function skills(text){
-return String(text||"")
-.split(/[,、，]/)
-.map(value=>value.trim())
-.filter(Boolean);
-}
-
-function coversSkills(team,requiredText){
-const requiredSkills=skills(requiredText);
-
-return requiredSkills.every(
-requiredSkill=>{
-return team.some(
-currentMember=>{
-return skills(
-currentMember.skills
-).includes(requiredSkill);
-}
-);
-}
-);
-}
-
-function chooseWorkers(availableMembers,desiredPeople,requiredText){
-for(
-let count=Math.max(1,desiredPeople);
-count<=availableMembers.length;
-count++
-){
-const selectedTeam=combinations(
-availableMembers,
-count
-).find(group=>{
-return coversSkills(
-group,
-requiredText
-);
-});
-
-if(selectedTeam){
-return selectedTeam;
-}
-}
-
-return null;
-}
-
-function draw(result,activeMembers,begin){
-resultArea.innerHTML="";
-
-resultMessage.textContent=
-`${result.done.length}件を配置しました`;
-
-const usedTasks=[
-...new Map(
-result.done.map(item=>[
-item.task.id,
-item.task
-])
-).values()
-];
-
-if(usedTasks.length){
-const legend=el("div","legend");
-
-usedTasks.forEach(currentTask=>{
-const item=el("div","legend-item");
-const color=el("span","swatch");
-
-color.style.background=currentTask.color;
-
-item.append(
-color,
-document.createTextNode(
-currentTask.name
-)
-);
-
-legend.append(item);
-});
-
-resultArea.append(legend);
-}
-
-const table=el("div","schedule");
-
-table.style.setProperty(
-"--slots",
-result.slotCount
-);
-
-const header=el("div","timeline-row");
-const corner=el("div","name-cell");
-
-corner.textContent="作業者名";
-header.append(corner);
-
-for(
-let slot=0;
-slot<result.slotCount;
-slot+=4
-){
-const timeCell=el(
-"div",
-"time-cell hour-line"
-);
-
-const columnSpan=Math.min(
-4,
-result.slotCount-slot
-);
-
-timeCell.style.gridColumn=
-`${slot+2} / span ${columnSpan}`;
-
-timeCell.textContent=clock(
-begin+slot*STEP
-);
-
-header.append(timeCell);
-}
-
-table.append(header);
-
-activeMembers.forEach(currentMember=>{
-const row=el("div","timeline-row");
-const name=el("div","name-cell");
-
-name.textContent=currentMember.name;
-row.append(name);
-
-for(
-let slot=0;
-slot<result.slotCount;
-slot++
-){
-let lineClass="";
-
-if(slot%4===0){
-lineClass="hour-line";
-}else if(slot%2===0){
-lineClass="half-line";
-}
-
-const grid=el(
-"div",
-"grid-cell "+lineClass
-);
-
-grid.style.gridColumn=slot+2;
-row.append(grid);
-}
-
-let slot=0;
-
-while(slot<result.slotCount){
-const cell=
-result.cells[currentMember.id][slot];
-
-if(!cell){
-slot++;
-continue;
-}
-
-let endSlot=slot+1;
-
-while(
-endSlot<result.slotCount&&
-sameCell(
-cell,
-result.cells[
-currentMember.id
-][endSlot]
-)
-){
-endSlot++;
-}
-
-const bar=el(
-"div",
-cell.type==="break"
-?"break-bar"
-:"bar"
-);
-
-bar.style.gridColumn=
-`${slot+2} / ${endSlot+2}`;
-
-if(cell.type==="break"){
-bar.textContent="休憩";
-}else{
-bar.textContent=cell.task.name;
-
-bar.style.setProperty(
-"--bar-color",
-cell.task.color
-);
-}
-
-row.append(bar);
-slot=endSlot;
-}
-
-table.append(row);
-});
-
-resultArea.append(table);
-
-if(result.failed.length){
-const box=el(
-"section",
-"unplaced"
-);
-
-const failureList=result.failed
-.map(item=>{
-return(
-"<li><strong>"+
-escapeHtml(item.task.name)+
-"</strong>："+
-escapeHtml(item.reason)+
-"</li>"
-);
-})
-.join("");
-
-box.innerHTML=
-"<h3>配置できなかった作業</h3>"+
-"<ul>"+
-failureList+
-"</ul>";
-
-resultArea.append(box);
-}
-}
-
-function sameCell(first,second){
-return(
-first&&
-second&&
-first.type===second.type&&
-(
-first.type==="break"||
-first.task.id===second.task.id
-)
-);
-}
-
-function parseDateTime(value){
-const match=String(value||"")
-.trim()
-.match(
-/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})$/
-);
-
-if(!match){
-return null;
-}
-
-const year=Number(match[1]);
-const month=Number(match[2]);
-const day=Number(match[3]);
-const hours=Number(match[4]);
-const minutes=Number(match[5]);
-
-const date=new Date(
-year,
-month-1,
-day,
-hours,
-minutes
-);
-
-const valid=
-date.getFullYear()===year&&
-date.getMonth()===month-1&&
-date.getDate()===day&&
-date.getHours()===hours&&
-date.getMinutes()===minutes;
-
-return valid?date:null;
-}
-
-function toMin(value){
-const date=parseDateTime(value);
-
-if(!date){
-return null;
-}
-
-return Math.floor(
-date.getTime()/60000
-);
-}
-
-function clock(totalMinutes){
-const date=new Date(
-totalMinutes*60000
-);
-
-const month=String(
-date.getMonth()+1
-).padStart(2,"0");
-
-const day=String(
-date.getDate()
-).padStart(2,"0");
-
-const hours=String(
-date.getHours()
-).padStart(2,"0");
-
-const minutes=String(
-date.getMinutes()
-).padStart(2,"0");
-
-return(
-month+
-"/"+
-day+
-"\n"+
-hours+
-":"+
-minutes
-);
-}
-
-function localDateTime(date){
-const year=date.getFullYear();
-
-const month=String(
-date.getMonth()+1
-).padStart(2,"0");
-
-const day=String(
-date.getDate()
-).padStart(2,"0");
-
-const hours=String(
-date.getHours()
-).padStart(2,"0");
-
-const minutes=String(
-date.getMinutes()
-).padStart(2,"0");
-
-return(
-year+
-"-"+
-month+
-"-"+
-day+
-" "+
-hours+
-":"+
-minutes
-);
-}
-
-function setDefaultDateTimes(){
-const now=new Date();
-
-const start=new Date(
-now.getFullYear(),
-now.getMonth(),
-now.getDate(),
-7,
-0
-);
-
-const end=new Date(
-now.getFullYear(),
-now.getMonth(),
-now.getDate(),
-20,
-0
-);
-
-startEl.value=localDateTime(start);
-endEl.value=localDateTime(end);
-}
-
-function dateTimeOnWorkDate(time){
-const base=
-parseDateTime(startEl.value)||
-new Date();
-
-const[hours,minutes]=
-time.split(":").map(Number);
-
-return localDateTime(
-new Date(
-base.getFullYear(),
-base.getMonth(),
-base.getDate(),
-hours,
-minutes
-)
-);
-}
-
-function normalizeDateTime(value){
-if(/^\d{2}:\d{2}$/.test(value||"")){
-return dateTimeOnWorkDate(value);
-}
-
-const date=parseDateTime(value);
-
-if(date){
-return localDateTime(date);
-}
-
-return String(value||"").trim();
-}
-
-function escapeHtml(value){
-const element=
-document.createElement("div");
-
-element.textContent=String(value);
-
-return element.innerHTML;
-}
-
-function toast(message){
-const element=$("toast");
-
-element.textContent=message;
-element.classList.add("show");
-
-clearTimeout(toast.timer);
-
-toast.timer=setTimeout(()=>{
-element.classList.remove("show");
-},2600);
-}
-
-function save(){
-localStorage.setItem(
-STORE,
-JSON.stringify({
-start:startEl.value,
-end:endEl.value,
-members,
-tasks
-})
-);
-}
-
-function load(){
-try{
-const saved=JSON.parse(
-localStorage.getItem(STORE)
-);
-
-if(!saved){
-return;
-}
-
-if(saved.start){
-startEl.value=
-normalizeDateTime(saved.start);
-}
-
-if(saved.end){
-endEl.value=
-normalizeDateTime(saved.end);
-}
-
-if(Array.isArray(saved.members)){
-members=saved.members.map(
-savedMember=>{
-const savedBreaks=
-Array.isArray(
-savedMember.breaks
-)
-?savedMember.breaks
-:[];
-
-return{
-...member(),
-...savedMember,
-breaks:savedBreaks.map(
-breakItem=>{
-return{
-...breakItem,
-start:normalizeDateTime(
-breakItem.start
-),
-end:normalizeDateTime(
-breakItem.end
-)
-};
-}
-)
-};
-}
-);
-}
-
-if(Array.isArray(saved.tasks)){
-tasks=saved.tasks.map(
-(savedTask,index)=>{
-return{
-...task(),
-...savedTask,
-start:normalizeDateTime(
-savedTask.start
-),
-color:
-savedTask.color||
-COLORS[index%COLORS.length]
-};
-}
-);
-}
-}catch(error){
-console.warn(
-"保存データを読み込めませんでした",
-error
-);
-}
+if (stepValueEl && stepUnitEl) {
+  const updateStep = () => {
+    const value = Math.max(
+      1,
+      Math.round(Number(stepValueEl.value) || 1),
+    );
+
+    stepValueEl.value = value;
+
+    scheduleStep = {
+      value,
+      unit: stepUnitEl.value,
+    };
+
+    STEP = stepToMinutes(scheduleStep);
+
+    save();
+    refreshForStepUnit();
+  };
+
+  stepValueEl.onchange = updateStep;
+  stepUnitEl.onchange = updateStep;
+}
+
+function id() {
+  return (
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 8)
+  );
+}
+
+function member(name = "", skills = "") {
+  return {
+    id: id(),
+    name,
+    skills,
+    availability: null,
+    restRules: [],
+  };
+}
+
+function defaultAvailability() {
+  return (
+    baseAvailabilityForPeriod()[0] || {
+      id: id(),
+      start: dateTimeOnWorkDate(baseAvailability.start),
+      end: dateTimeOnWorkDate(baseAvailability.end),
+    }
+  );
+}
+
+function baseAvailabilityForPeriod() {
+  const workStart = parseDateTime(startEl.value);
+  const workEnd = parseDateTime(endEl.value);
+
+  if (!workStart || !workEnd || workEnd <= workStart) {
+    return [];
+  }
+
+  const startMinutes = timeOnlyToMinutes(
+    baseAvailability.start,
+  );
+
+  const endMinutes = timeOnlyToMinutes(
+    baseAvailability.end,
+  );
+
+  if (
+    startMinutes === null ||
+    endMinutes === null ||
+    endMinutes <= startMinutes
+  ) {
+    return [];
+  }
+
+  const availability = [];
+
+  const currentDate = new Date(
+    workStart.getFullYear(),
+    workStart.getMonth(),
+    workStart.getDate(),
+  );
+
+  const lastDate = new Date(
+    workEnd.getFullYear(),
+    workEnd.getMonth(),
+    workEnd.getDate(),
+  );
+
+  while (currentDate <= lastDate) {
+    const dailyStart = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate(),
+      Math.floor(startMinutes / 60),
+      startMinutes % 60,
+    );
+
+    const dailyEnd = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth(),
+      currentDate.getDate(),
+      Math.floor(endMinutes / 60),
+      endMinutes % 60,
+    );
+
+    const actualStart = new Date(
+      Math.max(dailyStart.getTime(), workStart.getTime()),
+    );
+
+    const actualEnd = new Date(
+      Math.min(dailyEnd.getTime(), workEnd.getTime()),
+    );
+
+    if (actualEnd > actualStart) {
+      availability.push({
+        id: id(),
+        start: localDateTime(actualStart),
+        end: localDateTime(actualEnd),
+      });
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return availability;
+}
+
+function initializeMemberAvailability() {
+  members.forEach((currentMember) => {
+    if (!Array.isArray(currentMember.availability)) {
+      currentMember.availability =
+        baseAvailabilityForPeriod();
+    }
+
+    if (!Array.isArray(currentMember.restRules)) {
+      currentMember.restRules = [];
+    }
+  });
+}
+
+function setupBaseAvailabilitySettings() {
+  const addMemberButton = $("addMember");
+
+  if (
+    !addMemberButton ||
+    $("baseAvailabilitySettings")
+  ) {
+    return;
+  }
+
+  const settingsButton = button(
+    "基底設定",
+    "secondary basis-settings-button",
+    () => {
+      startInput.value = baseAvailability.start;
+      endInput.value = baseAvailability.end;
+
+      modal.classList.add("show");
+    },
+  );
+
+  settingsButton.id = "baseAvailabilitySettings";
+
+  addMemberButton.parentElement.insertBefore(
+    settingsButton,
+    addMemberButton,
+  );
+
+  const modal = el("div", "base-modal");
+  const panel = el("section", "base-modal-panel");
+  const heading = el("h3");
+  const description = el("p", "muted");
+  const fields = el("div", "base-time-fields");
+  const startLabel = el("label");
+  const endLabel = el("label");
+  const startInput = document.createElement("input");
+  const endInput = document.createElement("input");
+  const actions = el("div", "base-modal-actions");
+
+  heading.textContent = "稼働時間の基底設定";
+
+  description.textContent =
+    "「基底に揃える」を押したメンバーに適用される時間です";
+
+  startInput.type = "time";
+  startInput.step = "900";
+  startInput.value = baseAvailability.start;
+
+  endInput.type = "time";
+  endInput.step = "900";
+  endInput.value = baseAvailability.end;
+
+  startLabel.append(
+    label("開始時刻"),
+    startInput,
+  );
+
+  endLabel.append(
+    label("終了時刻"),
+    endInput,
+  );
+
+  fields.append(startLabel, endLabel);
+
+  const closeModal = () => {
+    modal.classList.remove("show");
+  };
+
+  actions.append(
+    button(
+      "キャンセル",
+      "secondary",
+      closeModal,
+    ),
+    button("保存", "primary", () => {
+      const startMinutes = timeOnlyToMinutes(
+        startInput.value,
+      );
+
+      const endMinutes = timeOnlyToMinutes(
+        endInput.value,
+      );
+
+      if (
+        startMinutes === null ||
+        endMinutes === null ||
+        endMinutes <= startMinutes
+      ) {
+        toast(
+          "基底の開始時刻と終了時刻を確認してください",
+        );
+
+        return;
+      }
+
+      if (
+        startMinutes % STEP ||
+        endMinutes % STEP
+      ) {
+        toast(
+          `基底時間は${stepLabel()}単位で設定してください`,
+        );
+
+        return;
+      }
+
+      baseAvailability = {
+        start: startInput.value,
+        end: endInput.value,
+      };
+
+      save();
+      closeModal();
+
+      toast("稼働時間の基底を保存しました");
+    }),
+  );
+
+  panel.append(
+    heading,
+    description,
+    fields,
+    actions,
+  );
+
+  modal.append(panel);
+
+  modal.onclick = (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  };
+
+  document.body.append(modal);
+}
+
+function timeOnlyToMinutes(value) {
+  const match = String(value || "").match(
+    /^(\d{2}):(\d{2})$/,
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (
+    hours > 23 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  return hours * 60 + minutes;
+}
+
+function stepToMinutes(step) {
+  const multiplier = {
+    minute: 1,
+    hour: 60,
+    day: 1440,
+  }[step.unit] || 1;
+
+  return (
+    Math.max(1, Number(step.value) || 1) *
+    multiplier
+  );
+}
+
+function syncStepInputs() {
+  STEP = stepToMinutes(scheduleStep);
+
+  if (stepValueEl) {
+    stepValueEl.value = scheduleStep.value;
+  }
+
+  if (stepUnitEl) {
+    stepUnitEl.value = scheduleStep.unit;
+  }
+}
+
+function stepLabel() {
+  const unitLabel = {
+    minute: "分",
+    hour: "時間",
+    day: "日",
+  }[scheduleStep.unit] || "分";
+
+  return `${scheduleStep.value}${unitLabel}`;
+}
+
+function isDayMode() {
+  return scheduleStep.unit === "day";
+}
+
+function startOfDateValue(value) {
+  const date = parseDateTime(value);
+
+  if (!date) {
+    return value;
+  }
+
+  return localDateTime(
+    new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+    ),
+  );
+}
+
+function scheduleBounds() {
+  const start = toMin(
+    startOfDateValue(startEl.value),
+  );
+
+  let end = toMin(
+    startOfDateValue(endEl.value),
+  );
+
+  /*
+   * 日単位の場合、終了日も工程期間に含めます。
+   * 例：9月1日～9月3日は3日間です。
+   */
+  if (isDayMode() && end !== null) {
+    end += 1440;
+  }
+
+  return {
+    start,
+    end,
+  };
+}
+
+function refreshForStepUnit() {
+  document.body.classList.toggle(
+    "day-mode",
+    isDayMode(),
+  );
+
+  $("workStartLabel").textContent =
+    isDayMode() ? "開始日" : "開始日時";
+
+  $("workEndLabel").textContent =
+    isDayMode() ? "終了日" : "終了日時";
+
+  $("overallSettingsDescription").textContent =
+    isDayMode()
+      ? "作業期間とメンバーを入力します"
+      : "作業時間とメンバーを入力します";
+
+  document
+    .querySelectorAll(
+      ".overall-time .datetime-input",
+    )
+    .forEach((element) => {
+      element.remove();
+    });
+
+  [startEl, endEl].forEach((element) => {
+    delete element.dataset.enhanced;
+  });
+
+  enhanceOverallDateTimeInputs();
+  render();
+}
+
+function task(
+  name = "",
+  minutes = 60,
+  people = 1,
+  skill = "",
+) {
+  return {
+    id: id(),
+    name,
+    minutes,
+    start: "",
+    people,
+    skill,
+    before: "",
+    interruptible: true,
+    shareable: false,
+    color: "",
+  };
+}
+
+function render() {
+  renderMembers();
+  renderTasks();
+}
+
+function renderMembers() {
+  memberList.innerHTML = "";
+
+  members.forEach((currentMember) => {
+    const card = el(
+      "article",
+      "member-card",
+    );
+
+    const memberMain = el(
+      "div",
+      "member-main",
+    );
+
+    memberMain.append(
+      textField(
+        "名前",
+        currentMember.name,
+        (value) => {
+          currentMember.name = value;
+        },
+      ),
+      textField(
+        "専門（複数は読点・カンマ区切り）",
+        currentMember.skills,
+        (value) => {
+          currentMember.skills = value;
+        },
+        "",
+        renderTasks,
+      ),
+      button("削除", "delete", () => {
+        members = members.filter(
+          (memberItem) =>
+            memberItem.id !== currentMember.id,
+        );
+
+        save();
+        render();
+      }),
+    );
+
+    /*
+     * 日単位では、稼働時間と休憩の設定を
+     * 表示しません。
+     */
+    if (isDayMode()) {
+      card.append(memberMain);
+      memberList.append(card);
+
+      return;
+    }
+
+    const availabilityBox = el(
+      "div",
+      "break-box",
+    );
+
+    const availabilityHeader = el(
+      "div",
+      "break-head",
+    );
+
+    availabilityHeader.innerHTML =
+      "<strong>稼働時間</strong>";
+
+    const availabilityActions = el(
+      "div",
+      "availability-actions",
+    );
+
+    availabilityActions.append(
+      button(
+        "基底に揃える",
+        "small basis-button",
+        () => {
+          currentMember.availability =
+            baseAvailabilityForPeriod();
+
+          save();
+          renderMembers();
+        },
+      ),
+      button(
+        "＋ 稼働時間を追加",
+        "small",
+        () => {
+          currentMember.availability.push({
+            id: id(),
+            start: dateTimeOnWorkDate(
+              baseAvailability.start,
+            ),
+            end: dateTimeOnWorkDate(
+              baseAvailability.end,
+            ),
+          });
+
+          save();
+          renderMembers();
+        },
+      ),
+    );
+
+    availabilityHeader.append(
+      availabilityActions,
+    );
+
+    const availabilityList = el(
+      "div",
+      "break-list",
+    );
+
+    if (!currentMember.availability.length) {
+      availabilityList.innerHTML =
+        '<p class="muted">稼働時間なし（全時間が休憩になります）</p>';
+    }
+
+    currentMember.availability.forEach(
+      (availability) => {
+        const row = el(
+          "div",
+          "break-row",
+        );
+
+        row.append(
+          timeInput(
+            availability.start,
+            (value) => {
+              availability.start = value;
+            },
+            "稼働開始",
+          ),
+          span("～", "dash"),
+          timeInput(
+            availability.end,
+            (value) => {
+              availability.end = value;
+            },
+            "稼働終了",
+          ),
+          button("削除", "delete", () => {
+            currentMember.availability =
+              currentMember.availability.filter(
+                (item) =>
+                  item.id !== availability.id,
+              );
+
+            save();
+            renderMembers();
+          }),
+        );
+
+        availabilityList.append(row);
+      },
+    );
+
+    availabilityBox.append(
+      availabilityHeader,
+      availabilityList,
+    );
+
+    const restBox = el(
+      "div",
+      "break-box",
+    );
+
+    const restHeader = el(
+      "div",
+      "break-head",
+    );
+
+    restHeader.innerHTML =
+      "<strong>休憩</strong>";
+
+    restHeader.append(
+      button(
+        "＋ 休憩を追加",
+        "small",
+        () => {
+          currentMember.restRules.push({
+            id: id(),
+            type: "flexible",
+            minutes: 60,
+            start:
+              dateTimeOnWorkDate("12:00"),
+            end:
+              dateTimeOnWorkDate("13:00"),
+          });
+
+          save();
+          renderMembers();
+        },
+      ),
+    );
+
+    const restList = el(
+      "div",
+      "break-list",
+    );
+
+    if (!currentMember.restRules.length) {
+      restList.innerHTML =
+        '<p class="muted">個別の休憩設定なし</p>';
+    }
+
+    currentMember.restRules.forEach(
+      (restRule) => {
+        const row = el(
+          "div",
+          "rest-row",
+        );
+
+        const typeSelect =
+          document.createElement("select");
+
+        [
+          [
+            "flexible",
+            "各稼働時間内に",
+          ],
+          [
+            "fixed",
+            "時間を固定",
+          ],
+        ].forEach(([value, text]) => {
+          const option =
+            document.createElement("option");
+
+          option.value = value;
+          option.textContent = text;
+          option.selected =
+            restRule.type === value;
+
+          typeSelect.append(option);
+        });
+
+        typeSelect.setAttribute(
+          "aria-label",
+          "休憩の指定方法",
+        );
+
+        typeSelect.onchange = () => {
+          restRule.type =
+            typeSelect.value;
+
+          save();
+          renderMembers();
+        };
+
+        row.append(typeSelect);
+
+        if (restRule.type === "fixed") {
+          const fixedFields = el(
+            "div",
+            "rest-fixed-fields",
+          );
+
+          fixedFields.append(
+            timeInput(
+              restRule.start,
+              (value) => {
+                restRule.start = value;
+              },
+              "休憩開始",
+            ),
+            span("～", "dash"),
+            timeInput(
+              restRule.end,
+              (value) => {
+                restRule.end = value;
+              },
+              "休憩終了",
+            ),
+          );
+
+          row.append(fixedFields);
+        } else {
+          const flexibleFields = el(
+            "label",
+            "rest-flex-fields",
+          );
+
+          const minutesInput =
+            document.createElement("input");
+
+          minutesInput.type = "number";
+          minutesInput.min = String(STEP);
+          minutesInput.step = String(STEP);
+
+          minutesInput.value = Math.max(
+            15,
+            Number(restRule.minutes) || 60,
+          );
+
+          minutesInput.setAttribute(
+            "aria-label",
+            "休憩時間（分）",
+          );
+
+          minutesInput.oninput = () => {
+            restRule.minutes = Math.max(
+              15,
+              Math.round(
+                Number(minutesInput.value) ||
+                  15,
+              ),
+            );
+
+            save();
+          };
+
+          flexibleFields.append(
+            minutesInput,
+            span("分とる", "rest-unit"),
+          );
+
+          row.append(flexibleFields);
+        }
+
+        row.append(
+          button("削除", "delete", () => {
+            currentMember.restRules =
+              currentMember.restRules.filter(
+                (item) =>
+                  item.id !== restRule.id,
+              );
+
+            save();
+            renderMembers();
+          }),
+        );
+
+        restList.append(row);
+      },
+    );
+
+    restBox.append(
+      restHeader,
+      restList,
+    );
+
+    card.append(
+      memberMain,
+      availabilityBox,
+      restBox,
+    );
+
+    memberList.append(card);
+  });
+}
+function renderTasks() {
+  taskList.innerHTML = "";
+
+  tasks.forEach((currentTask, index) => {
+    currentTask.color =
+      currentTask.color ||
+      COLORS[index % COLORS.length];
+
+    const card = el("article", "task-card");
+
+    card.style.setProperty(
+      "--card-color",
+      currentTask.color,
+    );
+
+    const accent = el("div", "accent");
+    const body = el("div", "task-body");
+    const header = el("div", "card-head");
+
+    header.innerHTML =
+      `<p>優先順位 ${index + 1}</p>`;
+
+    const actions = el(
+      "div",
+      "card-actions",
+    );
+
+    const upButton = button(
+      "↑",
+      "order-button",
+      () => {
+        moveTask(currentTask.id, -1);
+      },
+    );
+
+    const downButton = button(
+      "↓",
+      "order-button",
+      () => {
+        moveTask(currentTask.id, 1);
+      },
+    );
+
+    const dragHandle = span(
+      "↕",
+      "drag-handle",
+    );
+
+    upButton.disabled = index === 0;
+
+    downButton.disabled =
+      index === tasks.length - 1;
+
+    upButton.title =
+      "優先順位を上げる";
+
+    downButton.title =
+      "優先順位を下げる";
+
+    dragHandle.title =
+      "ドラッグして並べ替え";
+
+    dragHandle.draggable = true;
+
+    dragHandle.addEventListener(
+      "dragstart",
+      (event) => {
+        draggedTaskId = currentTask.id;
+
+        card.classList.add("dragging");
+
+        event.dataTransfer.effectAllowed =
+          "move";
+
+        event.dataTransfer.setData(
+          "text/plain",
+          currentTask.id,
+        );
+      },
+    );
+
+    dragHandle.addEventListener(
+      "dragend",
+      () => {
+        draggedTaskId = null;
+
+        document
+          .querySelectorAll(".task-card")
+          .forEach((taskCard) => {
+            taskCard.classList.remove(
+              "dragging",
+              "drag-over",
+            );
+          });
+      },
+    );
+
+    card.addEventListener(
+      "dragover",
+      (event) => {
+        event.preventDefault();
+
+        if (
+          draggedTaskId &&
+          draggedTaskId !== currentTask.id
+        ) {
+          card.classList.add("drag-over");
+        }
+      },
+    );
+
+    card.addEventListener(
+      "dragleave",
+      () => {
+        card.classList.remove("drag-over");
+      },
+    );
+
+    card.addEventListener(
+      "drop",
+      (event) => {
+        event.preventDefault();
+
+        card.classList.remove("drag-over");
+
+        const sourceId =
+          draggedTaskId ||
+          event.dataTransfer.getData(
+            "text/plain",
+          );
+
+        const insertAfter =
+          event.clientY >
+          card.getBoundingClientRect().top +
+            card.offsetHeight / 2;
+
+        reorderTask(
+          sourceId,
+          currentTask.id,
+          insertAfter,
+        );
+      },
+    );
+
+    actions.append(
+      upButton,
+      downButton,
+      dragHandle,
+      button("削除", "delete", () => {
+        const deletedId =
+          currentTask.id;
+
+        tasks = tasks.filter(
+          (taskItem) =>
+            taskItem.id !== deletedId,
+        );
+
+        tasks.forEach((taskItem) => {
+          if (
+            taskItem.before === deletedId
+          ) {
+            taskItem.before = "";
+          }
+        });
+
+        save();
+        renderTasks();
+      }),
+    );
+
+    header.append(actions);
+
+    const fields = el("div", "fields");
+
+    fields.append(
+      textField(
+        "作業名",
+        currentTask.name,
+        (value) => {
+          currentTask.name = value;
+        },
+        "wide",
+      ),
+
+      numberField(
+        isDayMode()
+          ? "所要日数"
+          : "所要時間（分）",
+
+        isDayMode()
+          ? Math.max(
+              1,
+              Math.ceil(
+                Number(
+                  currentTask.minutes,
+                ) / 1440,
+              ),
+            )
+          : currentTask.minutes,
+
+        (value) => {
+          currentTask.minutes =
+            isDayMode()
+              ? value * 1440
+              : value;
+        },
+      ),
+
+      optionalTime(
+        isDayMode()
+          ? "開始日（任意）"
+          : "開始日時（任意）",
+
+        currentTask.start,
+
+        (value) => {
+          currentTask.start = value;
+        },
+      ),
+
+      numberField(
+        "必要人数（最低人数）",
+        currentTask.people,
+        (value) => {
+          currentTask.people = value;
+        },
+      ),
+
+      skillField(currentTask),
+      beforeField(currentTask),
+
+      checkField(
+        "中断可能",
+        currentTask.interruptible,
+        (checked) => {
+          currentTask.interruptible =
+            checked;
+        },
+      ),
+
+      checkField(
+        "分担可能（空き人員も参加）",
+        currentTask.shareable,
+        (checked) => {
+          currentTask.shareable =
+            checked;
+        },
+      ),
+    );
+
+    body.append(header, fields);
+    card.append(accent, body);
+    taskList.append(card);
+  });
+}
+
+function textField(
+  fieldLabel,
+  value,
+  onChange,
+  className = "",
+  changeHandler = null,
+) {
+  const wrapper = el(
+    "label",
+    className,
+  );
+
+  wrapper.append(label(fieldLabel));
+
+  const input =
+    document.createElement("input");
+
+  input.type = "text";
+  input.value = value;
+
+  input.oninput = () => {
+    onChange(input.value);
+    save();
+  };
+
+  if (changeHandler) {
+    input.onchange = changeHandler;
+  }
+
+  wrapper.append(input);
+
+  return wrapper;
+}
+
+function numberField(
+  fieldLabel,
+  value,
+  onChange,
+) {
+  const wrapper =
+    el("label");
+
+  wrapper.append(label(fieldLabel));
+
+  const input =
+    document.createElement("input");
+
+  input.type = "number";
+  input.min = "1";
+  input.step = "1";
+  input.value = value;
+
+  input.oninput = () => {
+    const normalizedValue = Math.max(
+      1,
+      Math.round(
+        Number(input.value) || 1,
+      ),
+    );
+
+    onChange(normalizedValue);
+    save();
+  };
+
+  wrapper.append(input);
+
+  return wrapper;
+}
+
+function optionalTime(
+  fieldLabel,
+  value,
+  onChange,
+) {
+  const wrapper =
+    el("label");
+
+  wrapper.append(label(fieldLabel));
+
+  const control = dateTextInput(
+    value,
+    onChange,
+    "開始日時",
+  );
+
+  wrapper.append(control);
+
+  return wrapper;
+}
+
+function timeInput(
+  value,
+  onChange,
+  ariaLabel,
+) {
+  return dateTextInput(
+    value,
+    onChange,
+    ariaLabel,
+  );
+}
+
+function dateTextInput(
+  value,
+  onChange,
+  ariaLabel,
+) {
+  return buildDateTimeControl(
+    value,
+    onChange,
+    ariaLabel,
+  );
+}
+
+function enhanceOverallDateTimeInputs() {
+  [
+    [
+      startEl,
+      "全体の開始日時",
+    ],
+    [
+      endEl,
+      "全体の終了日時",
+    ],
+  ].forEach(
+    ([hiddenInput, ariaLabel]) => {
+      if (
+        !hiddenInput ||
+        hiddenInput.dataset.enhanced
+      ) {
+        return;
+      }
+
+      const control =
+        buildDateTimeControl(
+          hiddenInput.value,
+          (value) => {
+            hiddenInput.value = value;
+          },
+          ariaLabel,
+        );
+
+      hiddenInput.dataset.enhanced =
+        "true";
+
+      hiddenInput.type = "hidden";
+
+      hiddenInput.parentElement.insertBefore(
+        control,
+        hiddenInput,
+      );
+    },
+  );
+}
+
+function buildDateTimeControl(
+  value,
+  onChange,
+  ariaLabel,
+) {
+  const wrapper = el(
+    "div",
+    "datetime-input",
+  );
+
+  const dateInput =
+    document.createElement("input");
+
+  const timeInputElement =
+    document.createElement("input");
+
+  const parsedDate = parseDateTime(
+    normalizeDateTime(value),
+  );
+
+  dateInput.type = "date";
+
+  dateInput.setAttribute(
+    "aria-label",
+    ariaLabel + "の日付",
+  );
+
+  timeInputElement.type = "text";
+  timeInputElement.inputMode = "numeric";
+  timeInputElement.placeholder = "09:00";
+  timeInputElement.maxLength = 5;
+
+  timeInputElement.setAttribute(
+    "aria-label",
+    ariaLabel + "の時刻",
+  );
+
+  if (parsedDate) {
+    const normalized =
+      localDateTime(parsedDate);
+
+    dateInput.value =
+      normalized.slice(0, 10);
+
+    timeInputElement.value =
+      normalized.slice(11, 16);
+  }
+
+  /*
+   * 日単位の場合は時刻入力欄を
+   * 表示しません。
+   */
+  if (isDayMode()) {
+    timeInputElement.hidden = true;
+  }
+
+  const updateValue = () => {
+    if (!dateInput.value) {
+      onChange("");
+      save();
+
+      return;
+    }
+
+    if (isDayMode()) {
+      onChange(
+        dateInput.value + " 00:00",
+      );
+
+      save();
+
+      return;
+    }
+
+    if (
+      !timeInputElement.value.trim()
+    ) {
+      return;
+    }
+
+    const normalizedTime =
+      normalizeTypedTime(
+        timeInputElement.value,
+      );
+
+    if (!normalizedTime) {
+      toast(
+        "時刻は「09:00」の形式で入力してください",
+      );
+
+      return;
+    }
+
+    const dateTimeValue =
+      dateInput.value +
+      " " +
+      normalizedTime;
+
+    if (parseDateTime(dateTimeValue)) {
+      timeInputElement.value =
+        normalizedTime;
+
+      onChange(dateTimeValue);
+      save();
+    } else {
+      toast("日時を確認してください");
+    }
+  };
+
+  dateInput.onchange = updateValue;
+  timeInputElement.onchange =
+    updateValue;
+
+  wrapper.append(
+    dateInput,
+    timeInputElement,
+  );
+
+  return wrapper;
+}
+
+function normalizeTypedTime(value) {
+  const text = String(value || "")
+    .trim()
+    .replace(/：/g, ":");
+
+  let hours;
+  let minutes;
+
+  if (/^\d{3,4}$/.test(text)) {
+    const padded =
+      text.padStart(4, "0");
+
+    hours = Number(
+      padded.slice(0, 2),
+    );
+
+    minutes = Number(
+      padded.slice(2, 4),
+    );
+  } else {
+    const match = text.match(
+      /^(\d{1,2}):(\d{1,2})$/,
+    );
+
+    if (!match) {
+      return null;
+    }
+
+    hours = Number(match[1]);
+    minutes = Number(match[2]);
+  }
+
+  if (
+    hours < 0 ||
+    hours > 23 ||
+    minutes < 0 ||
+    minutes > 59
+  ) {
+    return null;
+  }
+
+  return (
+    String(hours).padStart(2, "0") +
+    ":" +
+    String(minutes).padStart(2, "0")
+  );
+}
+
+function skillField(currentTask) {
+  const wrapper = el(
+    "fieldset",
+    "skill-checkbox-field",
+  );
+
+  const heading = el("legend");
+
+  heading.textContent =
+    "専門性（複数選択可）";
+
+  wrapper.append(heading);
+
+  const registeredSkills = [
+    ...new Set(
+      members.flatMap(
+        (currentMember) =>
+          skills(currentMember.skills),
+      ),
+    ),
+  ];
+
+  const selectedSkills =
+    skills(currentTask.skill);
+
+  /*
+   * 保存済みの専門がメンバー欄から
+   * 削除されていても表示できるようにします。
+   */
+  const choices = [
+    ...new Set([
+      ...registeredSkills,
+      ...selectedSkills,
+    ]),
+  ];
+
+  if (!choices.length) {
+    const emptyMessage = el(
+      "p",
+      "skill-empty",
+    );
+
+    emptyMessage.textContent =
+      "メンバーの専門を先に入力してください";
+
+    wrapper.append(emptyMessage);
+
+    return wrapper;
+  }
+
+  const checkboxList = el(
+    "div",
+    "skill-checkbox-list",
+  );
+
+  choices.forEach((skillName) => {
+    const item = el(
+      "label",
+      "skill-checkbox-item",
+    );
+
+    const checkbox =
+      document.createElement("input");
+
+    const text =
+      document.createElement("span");
+
+    checkbox.type = "checkbox";
+    checkbox.value = skillName;
+
+    checkbox.checked =
+      selectedSkills.includes(skillName);
+
+    text.textContent =
+      registeredSkills.includes(skillName)
+        ? skillName
+        : `${skillName}（未登録）`;
+
+    checkbox.onchange = () => {
+      const checkedSkills = [
+        ...checkboxList.querySelectorAll(
+          'input[type="checkbox"]:checked',
+        ),
+      ].map(
+        (checkedCheckbox) =>
+          checkedCheckbox.value,
+      );
+
+      currentTask.skill =
+        checkedSkills.join("、");
+
+      save();
+    };
+
+    item.append(checkbox, text);
+    checkboxList.append(item);
+  });
+
+  wrapper.append(checkboxList);
+
+  return wrapper;
+}
+
+function beforeField(currentTask) {
+  const wrapper =
+    el("label");
+
+  wrapper.append(
+    label("前工程（任意）"),
+  );
+
+  const select =
+    document.createElement("select");
+
+  select.innerHTML =
+    '<option value="">なし</option>';
+
+  tasks
+    .filter(
+      (taskItem) =>
+        taskItem.id !== currentTask.id,
+    )
+    .forEach((taskItem) => {
+      const option =
+        document.createElement(
+          "option",
+        );
+
+      option.value = taskItem.id;
+
+      option.textContent =
+        taskItem.name ||
+        "名称未入力";
+
+      option.selected =
+        currentTask.before ===
+        taskItem.id;
+
+      select.append(option);
+    });
+
+  select.onchange = () => {
+    currentTask.before =
+      select.value;
+
+    save();
+  };
+
+  wrapper.append(select);
+
+  return wrapper;
+}
+
+function checkField(
+  fieldLabel,
+  checked,
+  onChange,
+) {
+  const wrapper = el(
+    "label",
+    "check-field",
+  );
+
+  const text = span(
+    fieldLabel,
+    "label",
+  );
+
+  const input =
+    document.createElement("input");
+
+  input.type = "checkbox";
+  input.checked = checked;
+
+  input.onchange = () => {
+    onChange(input.checked);
+    save();
+  };
+
+  wrapper.append(text, input);
+
+  return wrapper;
+}
+
+function el(
+  tagName,
+  className = "",
+) {
+  const element =
+    document.createElement(tagName);
+
+  if (className) {
+    element.className = className;
+  }
+
+  return element;
+}
+
+function span(
+  text,
+  className = "",
+) {
+  const element = el(
+    "span",
+    className,
+  );
+
+  element.textContent = text;
+
+  return element;
+}
+
+function label(text) {
+  return span(text);
+}
+
+function button(
+  text,
+  className,
+  onClick,
+) {
+  const element = el(
+    "button",
+    className,
+  );
+
+  element.type = "button";
+  element.textContent = text;
+  element.onclick = onClick;
+
+  return element;
+}
+
+function moveTask(
+  taskId,
+  direction,
+) {
+  const currentIndex =
+    tasks.findIndex(
+      (taskItem) =>
+        taskItem.id === taskId,
+    );
+
+  const newIndex =
+    currentIndex + direction;
+
+  if (
+    currentIndex < 0 ||
+    newIndex < 0 ||
+    newIndex >= tasks.length
+  ) {
+    return;
+  }
+
+  const [movedTask] =
+    tasks.splice(currentIndex, 1);
+
+  tasks.splice(
+    newIndex,
+    0,
+    movedTask,
+  );
+
+  save();
+  renderTasks();
+}
+
+function reorderTask(
+  sourceId,
+  targetId,
+  insertAfter,
+) {
+  if (
+    !sourceId ||
+    sourceId === targetId
+  ) {
+    return;
+  }
+
+  const sourceIndex =
+    tasks.findIndex(
+      (taskItem) =>
+        taskItem.id === sourceId,
+    );
+
+  if (
+    sourceIndex < 0 ||
+    !tasks.some(
+      (taskItem) =>
+        taskItem.id === targetId,
+    )
+  ) {
+    return;
+  }
+
+  const [movedTask] =
+    tasks.splice(sourceIndex, 1);
+
+  const targetIndex =
+    tasks.findIndex(
+      (taskItem) =>
+        taskItem.id === targetId,
+    );
+
+  tasks.splice(
+    targetIndex +
+      (insertAfter ? 1 : 0),
+    0,
+    movedTask,
+  );
+
+  save();
+  renderTasks();
+}
+
+function makeSchedule() {
+  save();
+
+  const {
+    start: workStart,
+    end: workEnd,
+  } = scheduleBounds();
+
+  const activeMembers =
+    members.filter(
+      (currentMember) =>
+        currentMember.name.trim(),
+    );
+
+  const activeTasks =
+    tasks.filter(
+      (currentTask) =>
+        currentTask.name.trim(),
+    );
+
+  if (
+    workStart === null ||
+    workEnd === null ||
+    workEnd <= workStart
+  ) {
+    toast(
+      "全体の開始・終了日時を確認してください",
+    );
+
+    return;
+  }
+
+  if (!activeMembers.length) {
+    toast(
+      "メンバーを1人以上入力してください",
+    );
+
+    return;
+  }
+
+  if (!activeTasks.length) {
+    toast(
+      "作業を1件以上入力してください",
+    );
+
+    return;
+  }
+
+  if (
+    (workEnd - workStart) % STEP
+  ) {
+    toast(
+      `全体の時刻は${stepLabel()}単位で設定してください`,
+    );
+
+    return;
+  }
+
+  /*
+   * 日単位では稼働時間・休憩の
+   * 検査を行いません。
+   */
+  if (!isDayMode()) {
+    for (
+      const currentMember
+      of activeMembers
+    ) {
+      for (
+        const availability
+        of currentMember.availability
+      ) {
+        const availabilityStart =
+          toMin(availability.start);
+
+        const availabilityEnd =
+          toMin(availability.end);
+
+        if (
+          availabilityStart === null ||
+          availabilityEnd === null
+        ) {
+          toast(
+            `${currentMember.name}さんの稼働日時は「2026-09-03 07:00」の形式で入力してください`,
+          );
+
+          return;
+        }
+
+        if (
+          availabilityEnd <=
+            availabilityStart ||
+          availabilityStart <
+            workStart ||
+          availabilityEnd >
+            workEnd
+        ) {
+          toast(
+            `${currentMember.name}さんの稼働日時を全体時間内で確認してください`,
+          );
+
+          return;
+        }
+
+        if (
+          (availabilityStart -
+            workStart) %
+            STEP ||
+          (availabilityEnd -
+            workStart) %
+            STEP
+        ) {
+          toast(
+            `${currentMember.name}さんの稼働時間を${stepLabel()}単位で設定してください`,
+          );
+
+          return;
+        }
+      }
+
+      const availableSlots =
+        new Set();
+
+      currentMember.availability.forEach(
+        (availability) => {
+          const firstSlot =
+            (toMin(
+              availability.start,
+            ) -
+              workStart) /
+            STEP;
+
+          const lastSlot =
+            (toMin(
+              availability.end,
+            ) -
+              workStart) /
+            STEP;
+
+          for (
+            let slot = firstSlot;
+            slot < lastSlot;
+            slot++
+          ) {
+            availableSlots.add(slot);
+          }
+        },
+      );
+
+      const fixedRestSlots =
+        new Set();
+
+      let flexibleRestMinutes = 0;
+
+      for (
+        const restRule
+        of currentMember.restRules
+      ) {
+        if (
+          restRule.type === "fixed"
+        ) {
+          const restStart =
+            toMin(restRule.start);
+
+          const restEnd =
+            toMin(restRule.end);
+
+          if (
+            restStart === null ||
+            restEnd === null
+          ) {
+            toast(
+              `${currentMember.name}さんの固定休憩は「2026-09-03 12:00」の形式で入力してください`,
+            );
+
+            return;
+          }
+
+          if (
+            restEnd <= restStart ||
+            restStart < workStart ||
+            restEnd > workEnd
+          ) {
+            toast(
+              `${currentMember.name}さんの固定休憩を全体時間内で確認してください`,
+            );
+
+            return;
+          }
+
+          if (
+            (restStart - workStart) %
+              STEP ||
+            (restEnd - workStart) %
+              STEP
+          ) {
+            toast(
+              `${currentMember.name}さんの固定休憩を${stepLabel()}単位で設定してください`,
+            );
+
+            return;
+          }
+
+          const restLastSlot =
+            (restEnd - workStart) /
+            STEP;
+
+          for (
+            let slot =
+              (restStart -
+                workStart) /
+              STEP;
+            slot < restLastSlot;
+            slot++
+          ) {
+            if (
+              !availableSlots.has(slot)
+            ) {
+              toast(
+                `${currentMember.name}さんの固定休憩は稼働時間内に設定してください`,
+              );
+
+              return;
+            }
+
+            fixedRestSlots.add(slot);
+          }
+        } else {
+          const minutes = Number(
+            restRule.minutes,
+          );
+
+          if (
+            !Number.isFinite(minutes) ||
+            minutes <= 0 ||
+            minutes % STEP
+          ) {
+            toast(
+              `${currentMember.name}さんの休憩時間を${stepLabel()}単位で設定してください`,
+            );
+
+            return;
+          }
+
+          flexibleRestMinutes +=
+            minutes;
+        }
+      }
+
+      const cannotFitRest =
+        currentMember.availability.some(
+          (availability) => {
+            const firstSlot =
+              (toMin(
+                availability.start,
+              ) -
+                workStart) /
+              STEP;
+
+            const lastSlot =
+              (toMin(
+                availability.end,
+              ) -
+                workStart) /
+              STEP;
+
+            let fixedRestCount = 0;
+
+            for (
+              let slot = firstSlot;
+              slot < lastSlot;
+              slot++
+            ) {
+              if (
+                fixedRestSlots.has(slot)
+              ) {
+                fixedRestCount++;
+              }
+            }
+
+            return (
+              flexibleRestMinutes /
+                STEP >
+              lastSlot -
+                firstSlot -
+                fixedRestCount
+            );
+          },
+        );
+
+      if (cannotFitRest) {
+        toast(
+          `${currentMember.name}さんの各稼働時間内に、指定された休憩時間を確保できません`,
+        );
+
+        return;
+      }
+    }
+  }
+
+  for (
+    const currentTask
+    of activeTasks
+  ) {
+    if (!currentTask.start) {
+      continue;
+    }
+
+    const taskStart = toMin(
+      isDayMode()
+        ? startOfDateValue(
+            currentTask.start,
+          )
+        : currentTask.start,
+    );
+
+    if (taskStart === null) {
+      toast(
+        `${currentTask.name}の開始日時は「2026-09-03 09:00」の形式で入力してください`,
+      );
+
+      return;
+    }
+
+    if (
+      (taskStart - workStart) %
+      STEP
+    ) {
+      toast(
+        `${currentTask.name}の開始時刻は${stepLabel()}単位で設定してください`,
+      );
+
+      return;
+    }
+  }
+
+  draw(
+    createSchedule(
+      activeTasks,
+      activeMembers,
+      workStart,
+      workEnd,
+    ),
+    activeMembers,
+    workStart,
+  );
+
+  $("resultSection").scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+}
+
+function createSchedule(
+  activeTasks,
+  activeMembers,
+  workStart,
+  workEnd,
+) {
+  const slotCount =
+    (workEnd - workStart) / STEP;
+
+  const cells = Object.fromEntries(
+    activeMembers.map(
+      (currentMember) => [
+        currentMember.id,
+        Array.from(
+          { length: slotCount },
+          () => ({
+            type: "break",
+          }),
+        ),
+      ],
+    ),
+  );
+
+  const completed = {};
+  const failed = [];
+  const processing = new Set();
+
+  activeMembers.forEach(
+    (currentMember) => {
+      /*
+       * 日単位では、期間内のすべての日を
+       * 稼働可能として扱います。
+       */
+      if (isDayMode()) {
+        for (
+          let slot = 0;
+          slot < slotCount;
+          slot++
+        ) {
+          cells[currentMember.id][slot] =
+            null;
+        }
+
+        return;
+      }
+
+      currentMember.availability.forEach(
+        (availability) => {
+          const firstSlot =
+            (toMin(
+              availability.start,
+            ) -
+              workStart) /
+            STEP;
+
+          const lastSlot =
+            (toMin(
+              availability.end,
+            ) -
+              workStart) /
+            STEP;
+
+          for (
+            let slot = firstSlot;
+            slot < lastSlot;
+            slot++
+          ) {
+            cells[currentMember.id][slot] =
+              null;
+          }
+        },
+      );
+
+      currentMember.restRules
+        .filter(
+          (restRule) =>
+            restRule.type === "fixed",
+        )
+        .forEach((restRule) => {
+          const firstSlot =
+            (toMin(restRule.start) -
+              workStart) /
+            STEP;
+
+          const lastSlot =
+            (toMin(restRule.end) -
+              workStart) /
+            STEP;
+
+          for (
+            let slot = firstSlot;
+            slot < lastSlot;
+            slot++
+          ) {
+            cells[currentMember.id][slot] = {
+              type: "break",
+              breakKind: "fixed",
+            };
+          }
+        });
+    },
+  );
+
+  const taskMap =
+    Object.fromEntries(
+      activeTasks.map(
+        (currentTask) => [
+          currentTask.id,
+          currentTask,
+        ],
+      ),
+    );
+
+  function addFailure(
+    currentTask,
+    reason,
+  ) {
+    const alreadyFailed =
+      failed.some(
+        (failedItem) =>
+          failedItem.task.id ===
+          currentTask.id,
+      );
+
+    if (!alreadyFailed) {
+      failed.push({
+        task: currentTask,
+        reason,
+      });
+    }
+  }
+
+  function placeTask(
+    currentTask,
+    latestSlot = slotCount,
+  ) {
+    if (completed[currentTask.id]) {
+      return completed[currentTask.id];
+    }
+
+    if (
+      processing.has(currentTask.id)
+    ) {
+      addFailure(
+        currentTask,
+        "前工程が循環しています",
+      );
+
+      return null;
+    }
+
+    processing.add(currentTask.id);
+
+    let earliestSlot = 0;
+
+    if (currentTask.before) {
+      const previousTask =
+        taskMap[currentTask.before];
+
+      if (!previousTask) {
+        addFailure(
+          currentTask,
+          "前工程が見つかりません",
+        );
+
+        processing.delete(
+          currentTask.id,
+        );
+
+        return null;
+      }
+
+      const previousResult =
+        placeTask(
+          previousTask,
+          currentTask.start
+            ? (
+                toMin(
+                  isDayMode()
+                    ? startOfDateValue(
+                        currentTask.start,
+                      )
+                    : currentTask.start,
+                ) -
+                workStart
+              ) / STEP
+            : latestSlot,
+        );
+
+      if (!previousResult) {
+        addFailure(
+          currentTask,
+          "前工程を配置できません",
+        );
+
+        processing.delete(
+          currentTask.id,
+        );
+
+        return null;
+      }
+
+      earliestSlot =
+        previousResult.end;
+    }
+
+    const missingSkills =
+      skills(currentTask.skill).filter(
+        (requiredSkill) =>
+          !activeMembers.some(
+            (currentMember) =>
+              skills(
+                currentMember.skills,
+              ).includes(
+                requiredSkill,
+              ),
+          ),
+      );
+
+    if (missingSkills.length) {
+      addFailure(
+        currentTask,
+        `専門「${missingSkills.join("、")}」を持つメンバーがいません`,
+      );
+
+      processing.delete(
+        currentTask.id,
+      );
+
+      return null;
+    }
+
+    const fixedStart =
+      currentTask.start
+        ? (
+            toMin(
+              isDayMode()
+                ? startOfDateValue(
+                    currentTask.start,
+                  )
+                : currentTask.start,
+            ) -
+            workStart
+          ) / STEP
+        : null;
+
+    if (
+      fixedStart !== null &&
+      (
+        fixedStart < 0 ||
+        fixedStart >= slotCount
+      )
+    ) {
+      addFailure(
+        currentTask,
+        "開始日時が全体の時間外です",
+      );
+
+      processing.delete(
+        currentTask.id,
+      );
+
+      return null;
+    }
+
+    if (
+      fixedStart !== null &&
+      fixedStart < earliestSlot
+    ) {
+      addFailure(
+        currentTask,
+        "開始日時が前工程の完了より前です",
+      );
+
+      processing.delete(
+        currentTask.id,
+      );
+
+      return null;
+    }
+
+    const plan =
+      currentTask.shareable
+        ? planShareable(
+            currentTask,
+            activeMembers,
+            cells,
+            fixedStart ??
+              earliestSlot,
+            latestSlot,
+            fixedStart !== null,
+          )
+        : planTogether(
+            currentTask,
+            activeMembers,
+            cells,
+            fixedStart ??
+              earliestSlot,
+            latestSlot,
+            fixedStart !== null,
+          );
+
+    if (!plan) {
+      addFailure(
+        currentTask,
+        "必要な人数、専門性、または時間枠を確保できません",
+      );
+
+      processing.delete(
+        currentTask.id,
+      );
+
+      return null;
+    }
+
+    plan.parts.forEach((part) => {
+      for (
+        let slot = part.start;
+        slot < part.end;
+        slot++
+      ) {
+        cells[part.memberId][slot] = {
+          type: "task",
+          task: currentTask,
+        };
+      }
+    });
+
+    completed[currentTask.id] = {
+      ...plan,
+      task: currentTask,
+    };
+
+    processing.delete(currentTask.id);
+
+    return completed[currentTask.id];
+  }
+
+  activeTasks
+    .filter(
+      (currentTask) =>
+        currentTask.start,
+    )
+    .sort(
+      (firstTask, secondTask) =>
+        toMin(firstTask.start) -
+        toMin(secondTask.start),
+    )
+    .forEach((currentTask) => {
+      placeTask(currentTask);
+    });
+
+  activeTasks
+    .filter(
+      (currentTask) =>
+        !currentTask.start,
+    )
+    .forEach((currentTask) => {
+      placeTask(currentTask);
+    });
+
+  if (!isDayMode()) {
+    allocateFlexibleBreaks(
+      cells,
+      completed,
+      failed,
+      activeTasks,
+      activeMembers,
+      slotCount,
+      workStart,
+    );
+  }
+
+  return {
+    cells,
+    done: Object.values(completed),
+    failed,
+    slotCount,
+  };
+}
+function allocateFlexibleBreaks(
+  cells,
+  completed,
+  failed,
+  activeTasks,
+  activeMembers,
+  slotCount,
+  workStart,
+) {
+  const requiredBreakSlots =
+    Object.fromEntries(
+      activeMembers.map(
+        (currentMember) => [
+          currentMember.id,
+          currentMember.restRules
+            .filter(
+              (restRule) =>
+                restRule.type !==
+                "fixed",
+            )
+            .reduce(
+              (total, restRule) =>
+                total +
+                Math.ceil(
+                  Number(
+                    restRule.minutes,
+                  ) / STEP,
+                ),
+              0,
+            ),
+        ],
+      ),
+    );
+
+  const taskPriority =
+    Object.fromEntries(
+      activeTasks.map(
+        (currentTask, index) => [
+          currentTask.id,
+          index,
+        ],
+      ),
+    );
+
+  const clearFlexibleBreaks = () => {
+    activeMembers.forEach(
+      (currentMember) => {
+        for (
+          let slot = 0;
+          slot < slotCount;
+          slot++
+        ) {
+          const cell =
+            cells[currentMember.id][slot];
+
+          if (
+            cell &&
+            cell.type === "break" &&
+            cell.breakKind === "flexible"
+          ) {
+            cells[currentMember.id][slot] =
+              null;
+          }
+        }
+      },
+    );
+  };
+
+  for (
+    let attempt = 0;
+    attempt <= activeTasks.length;
+    attempt++
+  ) {
+    clearFlexibleBreaks();
+
+    const membersWithoutBreaks = [];
+
+    activeMembers.forEach(
+      (currentMember) => {
+        currentMember.availability.forEach(
+          (availability) => {
+            let remaining =
+              requiredBreakSlots[
+                currentMember.id
+              ];
+
+            const firstSlot =
+              (toMin(
+                availability.start,
+              ) -
+                workStart) /
+              STEP;
+
+            const lastSlot =
+              (toMin(
+                availability.end,
+              ) -
+                workStart) /
+              STEP;
+
+            for (
+              let slot = firstSlot;
+              slot < lastSlot &&
+              remaining > 0;
+              slot++
+            ) {
+              if (
+                cells[currentMember.id][
+                  slot
+                ] === null
+              ) {
+                cells[currentMember.id][
+                  slot
+                ] = {
+                  type: "break",
+                  breakKind: "flexible",
+                };
+
+                remaining--;
+              }
+            }
+
+            if (
+              remaining > 0 &&
+              !membersWithoutBreaks.includes(
+                currentMember.id,
+              )
+            ) {
+              membersWithoutBreaks.push(
+                currentMember.id,
+              );
+            }
+          },
+        );
+      },
+    );
+
+    if (!membersWithoutBreaks.length) {
+      return;
+    }
+
+    const affectedMemberIds =
+      new Set(
+        membersWithoutBreaks,
+      );
+
+    const taskToRemove =
+      Object.values(completed)
+        .filter((result) =>
+          result.parts.some((part) =>
+            affectedMemberIds.has(
+              part.memberId,
+            ),
+          ),
+        )
+        .sort(
+          (firstResult, secondResult) =>
+            (
+              taskPriority[
+                secondResult.task.id
+              ] ?? -1
+            ) -
+            (
+              taskPriority[
+                firstResult.task.id
+              ] ?? -1
+            ),
+        )[0];
+
+    if (!taskToRemove) {
+      return;
+    }
+
+    const removedTaskIds =
+      new Set([
+        taskToRemove.task.id,
+      ]);
+
+    let changed = true;
+
+    while (changed) {
+      changed = false;
+
+      activeTasks.forEach(
+        (currentTask) => {
+          if (
+            currentTask.before &&
+            removedTaskIds.has(
+              currentTask.before,
+            ) &&
+            completed[currentTask.id] &&
+            !removedTaskIds.has(
+              currentTask.id,
+            )
+          ) {
+            removedTaskIds.add(
+              currentTask.id,
+            );
+
+            changed = true;
+          }
+        },
+      );
+    }
+
+    activeMembers.forEach(
+      (currentMember) => {
+        for (
+          let slot = 0;
+          slot < slotCount;
+          slot++
+        ) {
+          const cell =
+            cells[currentMember.id][slot];
+
+          if (
+            cell &&
+            cell.type === "task" &&
+            removedTaskIds.has(
+              cell.task.id,
+            )
+          ) {
+            cells[currentMember.id][slot] =
+              null;
+          }
+        }
+      },
+    );
+
+    removedTaskIds.forEach(
+      (taskId) => {
+        const removedResult =
+          completed[taskId];
+
+        if (!removedResult) {
+          return;
+        }
+
+        delete completed[taskId];
+
+        const alreadyFailed =
+          failed.some(
+            (failedItem) =>
+              failedItem.task.id === taskId,
+          );
+
+        if (!alreadyFailed) {
+          failed.push({
+            task: removedResult.task,
+            reason:
+              taskId ===
+              taskToRemove.task.id
+                ? "休憩時間を確保するため、優先順位に基づいて配置から外しました"
+                : "前工程が休憩時間の確保により配置から外れました",
+          });
+        }
+      },
+    );
+  }
+}
+
+function planTogether(
+  currentTask,
+  activeMembers,
+  cells,
+  startSlot,
+  latestSlot,
+  fixedStart,
+) {
+  const requiredPeople = Math.max(
+    1,
+    Number(currentTask.people),
+  );
+
+  const requiredSlots = Math.ceil(
+    Number(currentTask.minutes) / STEP,
+  );
+
+  if (
+    activeMembers.length <
+    requiredPeople
+  ) {
+    return null;
+  }
+
+  const memberGroups = combinations(
+    activeMembers,
+    requiredPeople,
+  ).filter((group) =>
+    coversSkills(
+      group,
+      currentTask.skill,
+    ),
+  );
+
+  for (
+    const group
+    of memberGroups
+  ) {
+    const possibleStarts = fixedStart
+      ? [startSlot]
+      : Array.from(
+          {
+            length: Math.max(
+              0,
+              latestSlot - startSlot,
+            ),
+          },
+          (_, index) =>
+            startSlot + index,
+        );
+
+    for (
+      const possibleStart
+      of possibleStarts
+    ) {
+      let selectedSlots = [];
+
+      if (currentTask.interruptible) {
+        for (
+          let slot = possibleStart;
+          slot < latestSlot &&
+          selectedSlots.length <
+            requiredSlots;
+          slot++
+        ) {
+          const allAvailable =
+            group.every(
+              (currentMember) =>
+                !cells[
+                  currentMember.id
+                ][slot],
+            );
+
+          if (allAvailable) {
+            selectedSlots.push(slot);
+          }
+        }
+      } else {
+        selectedSlots = Array.from(
+          {
+            length: requiredSlots,
+          },
+          (_, index) =>
+            possibleStart + index,
+        );
+
+        const outsidePeriod =
+          selectedSlots.at(-1) >=
+          latestSlot;
+
+        const hasConflict =
+          selectedSlots.some((slot) =>
+            group.some(
+              (currentMember) =>
+                cells[
+                  currentMember.id
+                ][slot],
+            ),
+          );
+
+        if (
+          outsidePeriod ||
+          hasConflict
+        ) {
+          continue;
+        }
+      }
+
+      if (
+        selectedSlots.length <
+          requiredSlots ||
+        selectedSlots[0] !==
+          possibleStart
+      ) {
+        continue;
+      }
+
+      const parts = [];
+
+      group.forEach(
+        (currentMember) => {
+          ranges(selectedSlots).forEach(
+            (range) => {
+              parts.push({
+                memberId:
+                  currentMember.id,
+                ...range,
+              });
+            },
+          );
+        },
+      );
+
+      return {
+        parts,
+        start: possibleStart,
+        end:
+          selectedSlots.at(-1) + 1,
+      };
+    }
+  }
+
+  return null;
+}
+
+function planShareable(
+  currentTask,
+  activeMembers,
+  cells,
+  startSlot,
+  latestSlot,
+  fixedStart,
+) {
+  const requiredPeople = Math.max(
+    1,
+    Number(currentTask.people),
+  );
+
+  const requiredWork = Math.ceil(
+    Number(currentTask.minutes) / STEP,
+  ) * requiredPeople;
+
+  const possibleStarts = fixedStart
+    ? [startSlot]
+    : Array.from(
+        {
+          length: Math.max(
+            0,
+            latestSlot - startSlot,
+          ),
+        },
+        (_, index) =>
+          startSlot + index,
+      );
+
+  if (
+    activeMembers.length <
+    requiredPeople
+  ) {
+    return null;
+  }
+
+  for (
+    const possibleStart
+    of possibleStarts
+  ) {
+    let remainingWork =
+      requiredWork;
+
+    const memberSlots = {};
+
+    let started = false;
+    let interruptionFound = false;
+
+    let lastSlot =
+      possibleStart - 1;
+
+    let actualStart = null;
+
+    for (
+      let slot = possibleStart;
+      slot < latestSlot &&
+      remainingWork > 0;
+      slot++
+    ) {
+      const availableMembers =
+        activeMembers.filter(
+          (currentMember) =>
+            !cells[
+              currentMember.id
+            ][slot],
+        );
+
+      if (
+        availableMembers.length >=
+          requiredPeople &&
+        coversSkills(
+          availableMembers,
+          currentTask.skill,
+        )
+      ) {
+        if (
+          slot === possibleStart ||
+          started ||
+          !fixedStart
+        ) {
+          if (
+            !currentTask.interruptible &&
+            interruptionFound
+          ) {
+            break;
+          }
+
+          if (!started) {
+            actualStart = slot;
+          }
+
+          const selectedMembers =
+            chooseWorkers(
+              availableMembers,
+              Math.min(
+                availableMembers.length,
+                Math.max(
+                  requiredPeople,
+                  remainingWork,
+                ),
+              ),
+              currentTask.skill,
+            );
+
+          if (!selectedMembers) {
+            if (
+              fixedStart &&
+              slot === possibleStart
+            ) {
+              break;
+            }
+
+            continue;
+          }
+
+          started = true;
+
+          selectedMembers.forEach(
+            (currentMember) => {
+              if (
+                !memberSlots[
+                  currentMember.id
+                ]
+              ) {
+                memberSlots[
+                  currentMember.id
+                ] = [];
+              }
+
+              memberSlots[
+                currentMember.id
+              ].push(slot);
+            },
+          );
+
+          remainingWork -=
+            selectedMembers.length;
+
+          lastSlot = slot;
+        }
+      } else {
+        if (
+          slot === possibleStart &&
+          fixedStart
+        ) {
+          break;
+        }
+
+        if (started) {
+          interruptionFound = true;
+        }
+
+        if (
+          !currentTask.interruptible &&
+          started
+        ) {
+          break;
+        }
+      }
+    }
+
+    if (
+      remainingWork <= 0 &&
+      started
+    ) {
+      const parts = [];
+
+      Object.entries(
+        memberSlots,
+      ).forEach(
+        ([memberId, slots]) => {
+          ranges(slots).forEach(
+            (range) => {
+              parts.push({
+                memberId,
+                ...range,
+              });
+            },
+          );
+        },
+      );
+
+      return {
+        parts,
+        start: actualStart,
+        end: lastSlot + 1,
+      };
+    }
+  }
+
+  return null;
+}
+
+function ranges(slots) {
+  const result = [];
+
+  if (!slots.length) {
+    return result;
+  }
+
+  let start = slots[0];
+  let end = start + 1;
+
+  for (
+    let index = 1;
+    index < slots.length;
+    index++
+  ) {
+    if (slots[index] === end) {
+      end++;
+    } else {
+      result.push({
+        start,
+        end,
+      });
+
+      start = slots[index];
+      end = start + 1;
+    }
+  }
+
+  result.push({
+    start,
+    end,
+  });
+
+  return result;
+}
+
+function combinations(items, count) {
+  const result = [];
+
+  function build(
+    startIndex,
+    selectedItems,
+  ) {
+    if (
+      selectedItems.length === count
+    ) {
+      result.push([
+        ...selectedItems,
+      ]);
+
+      return;
+    }
+
+    const remaining =
+      count - selectedItems.length;
+
+    for (
+      let index = startIndex;
+      index <=
+      items.length - remaining;
+      index++
+    ) {
+      selectedItems.push(
+        items[index],
+      );
+
+      build(
+        index + 1,
+        selectedItems,
+      );
+
+      selectedItems.pop();
+    }
+  }
+
+  build(0, []);
+
+  return result;
+}
+
+function skills(value) {
+  return String(value || "")
+    .split(/[,、，]/)
+    .map((skill) => skill.trim())
+    .filter(Boolean);
+}
+
+function coversSkills(
+  selectedMembers,
+  requiredSkills,
+) {
+  return skills(
+    requiredSkills,
+  ).every((requiredSkill) =>
+    selectedMembers.some(
+      (currentMember) =>
+        skills(
+          currentMember.skills,
+        ).includes(requiredSkill),
+    ),
+  );
+}
+
+function chooseWorkers(
+  availableMembers,
+  requestedCount,
+  requiredSkills,
+) {
+  for (
+    let count = Math.max(
+      1,
+      requestedCount,
+    );
+    count <=
+    availableMembers.length;
+    count++
+  ) {
+    const selected =
+      combinations(
+        availableMembers,
+        count,
+      ).find((group) =>
+        coversSkills(
+          group,
+          requiredSkills,
+        ),
+      );
+
+    if (selected) {
+      return selected;
+    }
+  }
+
+  return null;
+}
+
+function draw(
+  scheduleData,
+  activeMembers,
+  workStart,
+) {
+  resultArea.innerHTML = "";
+
+  resultMessage.textContent =
+    `${scheduleData.done.length}件を配置しました`;
+
+  const completedTasks = [
+    ...new Map(
+      scheduleData.done.map(
+        (result) => [
+          result.task.id,
+          result.task,
+        ],
+      ),
+    ).values(),
+  ];
+
+  if (completedTasks.length) {
+    const legend = el(
+      "div",
+      "legend",
+    );
+
+    completedTasks.forEach(
+      (currentTask) => {
+        const item = el(
+          "div",
+          "legend-item",
+        );
+
+        const swatch = el(
+          "span",
+          "swatch",
+        );
+
+        swatch.style.background =
+          currentTask.color;
+
+        item.append(
+          swatch,
+          document.createTextNode(
+            currentTask.name,
+          ),
+        );
+
+        legend.append(item);
+      },
+    );
+
+    resultArea.append(legend);
+  }
+
+  const schedule = el(
+    "div",
+    "schedule",
+  );
+
+  schedule.style.setProperty(
+    "--slots",
+    scheduleData.slotCount,
+  );
+
+  const timelineHeader = el(
+    "div",
+    "timeline-row",
+  );
+
+  const nameHeader = el(
+    "div",
+    "name-cell",
+  );
+
+  nameHeader.textContent =
+    "作業者名";
+
+  timelineHeader.append(nameHeader);
+
+  const headerSpan =
+    isDayMode() ? 1 : 4;
+
+  for (
+    let slot = 0;
+    slot < scheduleData.slotCount;
+    slot += headerSpan
+  ) {
+    const timeCell = el(
+      "div",
+      "time-cell hour-line",
+    );
+
+    const spanLength = Math.min(
+      headerSpan,
+      scheduleData.slotCount - slot,
+    );
+
+    timeCell.style.gridColumn =
+      `${slot + 2} / span ${spanLength}`;
+
+    timeCell.textContent = clock(
+      workStart + slot * STEP,
+    );
+
+    timelineHeader.append(timeCell);
+  }
+
+  schedule.append(timelineHeader);
+
+  activeMembers.forEach(
+    (currentMember) => {
+      const row = el(
+        "div",
+        "timeline-row",
+      );
+
+      const nameCell = el(
+        "div",
+        "name-cell",
+      );
+
+      nameCell.textContent =
+        currentMember.name;
+
+      row.append(nameCell);
+
+      for (
+        let slot = 0;
+        slot <
+        scheduleData.slotCount;
+        slot++
+      ) {
+        let lineClass = "";
+
+        if (isDayMode()) {
+          lineClass = "hour-line";
+        } else if (slot % 4 === 0) {
+          lineClass = "hour-line";
+        } else if (slot % 2 === 0) {
+          lineClass = "half-line";
+        }
+
+        const gridCell = el(
+          "div",
+          "grid-cell " + lineClass,
+        );
+
+        gridCell.style.gridColumn =
+          slot + 2;
+
+        row.append(gridCell);
+      }
+
+      let slot = 0;
+
+      while (
+        slot <
+        scheduleData.slotCount
+      ) {
+        const cell =
+          scheduleData.cells[
+            currentMember.id
+          ][slot];
+
+        if (!cell) {
+          slot++;
+
+          continue;
+        }
+
+        let endSlot = slot + 1;
+
+        while (
+          endSlot <
+            scheduleData.slotCount &&
+          sameCell(
+            cell,
+            scheduleData.cells[
+              currentMember.id
+            ][endSlot],
+          )
+        ) {
+          endSlot++;
+        }
+
+        const bar = el(
+          "div",
+          cell.type === "break"
+            ? "break-bar"
+            : "bar",
+        );
+
+        bar.style.gridColumn =
+          `${slot + 2} / ${endSlot + 2}`;
+
+        if (cell.type === "break") {
+          if (cell.breakKind) {
+            bar.textContent = "休憩";
+          } else {
+            bar.classList.add(
+              "unavailable-bar",
+            );
+
+            bar.textContent = "";
+          }
+        } else {
+          bar.textContent =
+            cell.task.name;
+
+          bar.style.setProperty(
+            "--bar-color",
+            cell.task.color,
+          );
+        }
+
+        row.append(bar);
+
+        slot = endSlot;
+      }
+
+      schedule.append(row);
+    },
+  );
+
+  resultArea.append(schedule);
+
+  if (scheduleData.failed.length) {
+    const unplaced = el(
+      "section",
+      "unplaced",
+    );
+
+    const items =
+      scheduleData.failed
+        .map(
+          (failedItem) =>
+            "<li><strong>" +
+            escapeHtml(
+              failedItem.task.name,
+            ) +
+            "</strong>：" +
+            escapeHtml(
+              failedItem.reason,
+            ) +
+            "</li>",
+        )
+        .join("");
+
+    unplaced.innerHTML =
+      "<h3>配置できなかった作業</h3><ul>" +
+      items +
+      "</ul>";
+
+    resultArea.append(unplaced);
+  }
+}
+
+function sameCell(
+  firstCell,
+  secondCell,
+) {
+  if (
+    !firstCell ||
+    !secondCell ||
+    firstCell.type !== secondCell.type
+  ) {
+    return false;
+  }
+
+  if (firstCell.type === "break") {
+    return (
+      firstCell.breakKind ===
+      secondCell.breakKind
+    );
+  }
+
+  return (
+    firstCell.task.id ===
+    secondCell.task.id
+  );
+}
+
+function parseDateTime(value) {
+  const match = String(value || "")
+    .trim()
+    .match(
+      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})$/,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hours = Number(match[4]);
+  const minutes = Number(match[5]);
+
+  const date = new Date(
+    year,
+    month - 1,
+    day,
+    hours,
+    minutes,
+  );
+
+  const isValid =
+    date.getFullYear() === year &&
+    date.getMonth() === month - 1 &&
+    date.getDate() === day &&
+    date.getHours() === hours &&
+    date.getMinutes() === minutes;
+
+  return isValid ? date : null;
+}
+
+function toMin(value) {
+  const date = parseDateTime(value);
+
+  return date
+    ? Math.floor(
+        date.getTime() / 60000,
+      )
+    : null;
+}
+
+function clock(minutes) {
+  const date =
+    new Date(minutes * 60000);
+
+  if (isDayMode()) {
+    return (
+      String(
+        date.getMonth() + 1,
+      ).padStart(2, "0") +
+      "/" +
+      String(
+        date.getDate(),
+      ).padStart(2, "0")
+    );
+  }
+
+  return (
+    String(
+      date.getMonth() + 1,
+    ).padStart(2, "0") +
+    "/" +
+    String(
+      date.getDate(),
+    ).padStart(2, "0") +
+    "\n" +
+    String(
+      date.getHours(),
+    ).padStart(2, "0") +
+    ":" +
+    String(
+      date.getMinutes(),
+    ).padStart(2, "0")
+  );
+}
+
+function localDateTime(date) {
+  return (
+    date.getFullYear() +
+    "-" +
+    String(
+      date.getMonth() + 1,
+    ).padStart(2, "0") +
+    "-" +
+    String(
+      date.getDate(),
+    ).padStart(2, "0") +
+    " " +
+    String(
+      date.getHours(),
+    ).padStart(2, "0") +
+    ":" +
+    String(
+      date.getMinutes(),
+    ).padStart(2, "0")
+  );
+}
+
+function setDefaultDateTimes() {
+  const now = new Date();
+
+  const defaultStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    7,
+    0,
+  );
+
+  const defaultEnd = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    20,
+    0,
+  );
+
+  startEl.value =
+    localDateTime(defaultStart);
+
+  endEl.value =
+    localDateTime(defaultEnd);
+}
+
+function dateTimeOnWorkDate(
+  timeValue,
+) {
+  const workDate =
+    parseDateTime(startEl.value) ||
+    new Date();
+
+  const [hours, minutes] =
+    timeValue
+      .split(":")
+      .map(Number);
+
+  return localDateTime(
+    new Date(
+      workDate.getFullYear(),
+      workDate.getMonth(),
+      workDate.getDate(),
+      hours,
+      minutes,
+    ),
+  );
+}
+
+function normalizeDateTime(value) {
+  if (
+    /^\d{2}:\d{2}$/.test(
+      value || "",
+    )
+  ) {
+    return dateTimeOnWorkDate(value);
+  }
+
+  const date =
+    parseDateTime(value);
+
+  return date
+    ? localDateTime(date)
+    : String(value || "").trim();
+}
+
+function escapeHtml(value) {
+  const element =
+    document.createElement("div");
+
+  element.textContent =
+    String(value);
+
+  return element.innerHTML;
+}
+
+function toast(message) {
+  const toastElement = $("toast");
+
+  toastElement.textContent = message;
+
+  toastElement.classList.add("show");
+
+  clearTimeout(toast.timer);
+
+  toast.timer = setTimeout(() => {
+    toastElement.classList.remove(
+      "show",
+    );
+  }, 2600);
+}
+
+function save() {
+  localStorage.setItem(
+    STORE,
+    JSON.stringify({
+      start: startEl.value,
+      end: endEl.value,
+      baseAvailability,
+      scheduleStep,
+      members,
+      tasks,
+    }),
+  );
+}
+
+function load() {
+  try {
+    const savedData = JSON.parse(
+      localStorage.getItem(STORE),
+    );
+
+    if (!savedData) {
+      return;
+    }
+
+    if (savedData.start) {
+      startEl.value =
+        normalizeDateTime(
+          savedData.start,
+        );
+    }
+
+    if (savedData.end) {
+      endEl.value =
+        normalizeDateTime(
+          savedData.end,
+        );
+    }
+
+    if (
+      savedData.scheduleStep &&
+      [
+        "minute",
+        "hour",
+        "day",
+      ].includes(
+        savedData.scheduleStep.unit,
+      )
+    ) {
+      scheduleStep = {
+        value: Math.max(
+          1,
+          Math.round(
+            Number(
+              savedData.scheduleStep
+                .value,
+            ) || 1,
+          ),
+        ),
+        unit:
+          savedData.scheduleStep.unit,
+      };
+
+      STEP =
+        stepToMinutes(scheduleStep);
+    }
+
+    if (
+      savedData.baseAvailability &&
+      timeOnlyToMinutes(
+        savedData.baseAvailability
+          .start,
+      ) !== null &&
+      timeOnlyToMinutes(
+        savedData.baseAvailability.end,
+      ) !== null &&
+      timeOnlyToMinutes(
+        savedData.baseAvailability.end,
+      ) >
+        timeOnlyToMinutes(
+          savedData.baseAvailability
+            .start,
+        )
+    ) {
+      baseAvailability = {
+        start:
+          savedData.baseAvailability
+            .start,
+        end:
+          savedData.baseAvailability.end,
+      };
+    }
+
+    if (
+      Array.isArray(
+        savedData.members,
+      )
+    ) {
+      members = savedData.members.map(
+        (savedMember) => {
+          const availability =
+            Array.isArray(
+              savedMember.availability,
+            )
+              ? savedMember.availability
+              : null;
+
+          const oldBreaks =
+            Array.isArray(
+              savedMember.breaks,
+            )
+              ? savedMember.breaks
+              : [];
+
+          return {
+            ...member(),
+            ...savedMember,
+
+            availability: (
+              availability !== null
+                ? availability
+                : availabilityFromBreaks(
+                    oldBreaks,
+                  )
+            ).map((item) => ({
+              ...item,
+              start:
+                normalizeDateTime(
+                  item.start,
+                ),
+              end:
+                normalizeDateTime(
+                  item.end,
+                ),
+            })),
+
+            restRules: (
+              Array.isArray(
+                savedMember.restRules,
+              )
+                ? savedMember.restRules
+                : []
+            ).map((restRule) => ({
+              id:
+                restRule.id || id(),
+
+              type:
+                restRule.type ===
+                "fixed"
+                  ? "fixed"
+                  : "flexible",
+
+              minutes: Math.max(
+                15,
+                Number(
+                  restRule.minutes,
+                ) || 60,
+              ),
+
+              start:
+                normalizeDateTime(
+                  restRule.start ||
+                    dateTimeOnWorkDate(
+                      "12:00",
+                    ),
+                ),
+
+              end:
+                normalizeDateTime(
+                  restRule.end ||
+                    dateTimeOnWorkDate(
+                      "13:00",
+                    ),
+                ),
+            })),
+
+            breaks: undefined,
+          };
+        },
+      );
+    }
+
+    if (
+      Array.isArray(savedData.tasks)
+    ) {
+      tasks = savedData.tasks.map(
+        (savedTask, index) => ({
+          ...task(),
+          ...savedTask,
+
+          start:
+            normalizeDateTime(
+              savedTask.start,
+            ),
+
+          color:
+            savedTask.color ||
+            COLORS[
+              index %
+                COLORS.length
+            ],
+        }),
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "保存データを読み込めませんでした",
+      error,
+    );
+  }
+}
+
+function availabilityFromBreaks(
+  breaks,
+) {
+  const workStart =
+    toMin(startEl.value);
+
+  const workEnd =
+    toMin(endEl.value);
+
+  if (
+    workStart === null ||
+    workEnd === null ||
+    workEnd <= workStart
+  ) {
+    return [];
+  }
+
+  const normalizedBreaks = breaks
+    .map((currentBreak) => ({
+      start: toMin(
+        normalizeDateTime(
+          currentBreak.start,
+        ),
+      ),
+
+      end: toMin(
+        normalizeDateTime(
+          currentBreak.end,
+        ),
+      ),
+    }))
+    .filter(
+      (currentBreak) =>
+        currentBreak.start !== null &&
+        currentBreak.end !== null &&
+        currentBreak.end >
+          currentBreak.start &&
+        currentBreak.end >
+          workStart &&
+        currentBreak.start <
+          workEnd,
+    )
+    .map((currentBreak) => ({
+      start: Math.max(
+        workStart,
+        currentBreak.start,
+      ),
+
+      end: Math.min(
+        workEnd,
+        currentBreak.end,
+      ),
+    }))
+    .sort(
+      (firstBreak, secondBreak) =>
+        firstBreak.start -
+        secondBreak.start,
+    );
+
+  const mergedBreaks = [];
+
+  normalizedBreaks.forEach(
+    (currentBreak) => {
+      const previousBreak =
+        mergedBreaks.at(-1);
+
+      if (
+        previousBreak &&
+        currentBreak.start <=
+          previousBreak.end
+      ) {
+        previousBreak.end =
+          Math.max(
+            previousBreak.end,
+            currentBreak.end,
+          );
+      } else {
+        mergedBreaks.push({
+          ...currentBreak,
+        });
+      }
+    },
+  );
+
+  const availability = [];
+
+  let currentStart = workStart;
+
+  mergedBreaks.forEach(
+    (currentBreak) => {
+      if (
+        currentBreak.start >
+        currentStart
+      ) {
+        availability.push({
+          id: id(),
+
+          start: localDateTime(
+            new Date(
+              currentStart * 60000,
+            ),
+          ),
+
+          end: localDateTime(
+            new Date(
+              currentBreak.start *
+                60000,
+            ),
+          ),
+        });
+      }
+
+      currentStart = Math.max(
+        currentStart,
+        currentBreak.end,
+      );
+    },
+  );
+
+  if (currentStart < workEnd) {
+    availability.push({
+      id: id(),
+
+      start: localDateTime(
+        new Date(
+          currentStart * 60000,
+        ),
+      ),
+
+      end: localDateTime(
+        new Date(
+          workEnd * 60000,
+        ),
+      ),
+    });
+  }
+
+  return availability;
 }

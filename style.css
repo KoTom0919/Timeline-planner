@@ -20,11 +20,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family:
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    "Noto Sans JP",
-    sans-serif;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans JP", sans-serif;
   font-size: 16px;
 }
 
@@ -46,6 +42,9 @@ p {
 }
 
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -158,8 +157,32 @@ p {
 
 .overall-time {
   display: grid;
-  grid-template-columns: repeat(2, minmax(150px, 250px));
+  grid-template-columns: repeat(3, minmax(150px, 250px));
   gap: 13px;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.topbar-button {
+  background: #e1ecee;
+  color: var(--navy);
+}
+
+.sub-head > #addMember,
+.task-section .section-head > #addTask {
+  display: none;
+}
+
+.schedule-step-inputs {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) minmax(80px, 0.8fr);
+  gap: 8px;
 }
 
 label span,
@@ -194,6 +217,7 @@ select:focus {
 }
 
 .member-card {
+  scroll-margin-top: 120px;
   padding: 16px;
   background: #f7f9fa;
   border: 1px solid #e0e8ea;
@@ -220,6 +244,100 @@ select:focus {
   margin-bottom: 9px;
 }
 
+.datetime-input {
+  display: grid;
+  grid-template-columns: minmax(140px, 1.2fr) minmax(82px, 0.8fr);
+  gap: 7px;
+  width: 100%;
+}
+
+.datetime-input input[type="date"],
+.datetime-input input[type="text"] {
+  width: 100%;
+  min-width: 0;
+}
+
+.datetime-input input[type="text"] {
+  text-align: center;
+}
+
+.day-mode .datetime-input {
+  grid-template-columns: minmax(140px, 1fr);
+}
+
+.day-mode .basis-settings-button {
+  display: none;
+}
+
+.availability-actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.basis-button {
+  background: #eef5f3;
+}
+
+.basis-settings-button {
+  margin-left: auto;
+}
+
+.base-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(6, 43, 60, 0.45);
+}
+
+.base-modal.show {
+  display: flex;
+}
+
+.base-modal-panel {
+  width: min(480px, 100%);
+  padding: 22px;
+  background: #fff;
+  border-radius: 15px;
+  box-shadow: 0 18px 55px rgba(6, 43, 60, 0.24);
+}
+
+.base-modal-panel h3 {
+  margin: 0 0 6px;
+}
+
+.base-time-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.base-range-list {
+  display: grid;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.base-range-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.base-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
 .break-list {
   display: grid;
   gap: 8px;
@@ -234,6 +352,34 @@ select:focus {
     auto;
   gap: 8px;
   align-items: center;
+}
+
+.rest-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.65fr) minmax(300px, 1.35fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.rest-fixed-fields {
+  display: grid;
+  grid-template-columns: minmax(130px, 1fr) auto minmax(130px, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.rest-flex-fields {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rest-flex-fields input {
+  width: 120px;
+}
+
+.rest-unit {
+  white-space: nowrap;
 }
 
 .dash {
@@ -254,6 +400,7 @@ select:focus {
 }
 
 .task-card {
+  scroll-margin-top: 120px;
   overflow: hidden;
   transition:
     opacity 0.15s,
@@ -448,6 +595,15 @@ select:focus {
   white-space: nowrap;
 }
 
+.break-bar.unavailable-bar {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: #c9d0d2;
+  color: transparent;
+}
+
 .legend {
   display: flex;
   flex-wrap: wrap;
@@ -522,10 +678,6 @@ select:focus {
     padding: 18px 16px;
   }
 
-  .desktop {
-    display: none;
-  }
-
   .container {
     width: min(100% - 20px, 620px);
     margin-top: 17px;
@@ -557,23 +709,20 @@ select:focus {
     grid-column: 2;
   }
 
-  .mobile-action {
-    position: fixed;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    z-index: 20;
-    display: block;
-    padding:
-      10px 14px
-      calc(10px + env(safe-area-inset-bottom));
-    border-top: 1px solid var(--line);
-    background: rgba(242, 245, 246, 0.95);
-    backdrop-filter: blur(8px);
+  .topbar {
+    align-items: flex-start;
   }
 
-  .mobile-action .primary {
-    width: 100%;
+  .topbar-actions {
+    max-width: 62%;
+    gap: 6px;
+  }
+
+  .topbar-actions .primary,
+  .topbar-actions .secondary {
+    min-width: 0;
+    padding: 8px 10px;
+    font-size: 0.78rem;
   }
 }
 
@@ -591,11 +740,41 @@ select:focus {
     grid-template-columns: 1fr;
   }
 
-  .break-row .dash {
+  .rest-row,
+  .rest-fixed-fields,
+  .base-time-fields,
+  .base-range-row {
+    grid-template-columns: 1fr;
+  }
+
+  .base-range-row .dash {
     display: none;
   }
 
-  .break-row .delete {
+  .base-range-row .delete {
+    justify-self: end;
+  }
+
+  .availability-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .availability-actions button {
+    flex: 1 1 auto;
+  }
+
+  .datetime-input {
+    grid-template-columns: minmax(135px, 1.25fr) minmax(78px, 0.75fr);
+  }
+
+  .break-row .dash,
+  .rest-row .dash {
+    display: none;
+  }
+
+  .break-row .delete,
+  .rest-row .delete {
     justify-self: end;
   }
 
@@ -729,4 +908,60 @@ select:focus {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+}
+.skill-checkbox-field {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.skill-checkbox-field legend {
+  margin-bottom: 6px;
+  color: #526970;
+  font-size: 0.88rem;
+  font-weight: 750;
+}
+
+.skill-checkbox-list {
+  display: flex;
+  min-height: 43px;
+  padding: 7px 9px;
+  border: 1px solid #c8d5d8;
+  border-radius: 9px;
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 7px 12px;
+}
+
+.skill-checkbox-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.skill-checkbox-item input {
+  width: 18px;
+  min-height: 18px;
+  margin: 0;
+}
+
+.skill-checkbox-item span {
+  display: inline;
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.skill-empty {
+  min-height: 43px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid #c8d5d8;
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.88rem;
 }
