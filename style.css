@@ -882,6 +882,7 @@ select:focus {
     break-inside: avoid;
   }
 }
+
 .skill-select {
   min-height: 100px;
   padding: 5px;
@@ -896,6 +897,7 @@ select:focus {
   background: #d9f1eb;
   color: #103c35;
 }
+
 @media print {
   * {
     -webkit-print-color-adjust: exact !important;
@@ -909,6 +911,7 @@ select:focus {
     print-color-adjust: exact !important;
   }
 }
+
 .skill-checkbox-field {
   min-width: 0;
   margin: 0;
@@ -964,4 +967,98 @@ select:focus {
   background: #ffffff;
   color: var(--muted);
   font-size: 0.88rem;
+}
+
+/* 横軸の幅調整 */
+.axis-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.axis-controls input {
+  width: 180px;
+  min-height: 24px;
+}
+
+.axis-controls span {
+  font-size: 0.8rem;
+  color: #52666b;
+}
+
+/* 省略された時間帯に対応する工程表 */
+.schedule {
+  min-width: 0;
+  width: max-content;
+}
+
+.timeline-row {
+  grid-template-columns: 120px var(--axis-tracks);
+}
+
+.time-cell {
+  position: relative;
+  overflow: visible;
+  white-space: pre-line;
+  font-size: 10px;
+  padding: 0;
+}
+
+.name-cell {
+  grid-row: 1;
+}
+
+/* 省略区間の二重線 */
+.gap-cell {
+  position: relative;
+  background: #f6f8f8;
+}
+
+.gap-cell::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 5px;
+  bottom: 5px;
+  width: 5px;
+  border-left: 2px solid #63777e;
+  border-right: 2px solid #63777e;
+  transform: translateX(-50%) skewX(-12deg);
+}
+
+/* バーの幅に合わせて文字を省略 */
+.bar,
+.break-bar {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar:focus-visible,
+.break-bar:focus-visible {
+  outline: 2px solid #123f51;
+  outline-offset: 2px;
+}
+
+@media print {
+  .axis-controls {
+    display: none !important;
+  }
+
+  .schedule {
+    width: 100%;
+  }
+
+  .timeline-row {
+    grid-template-columns: 90px var(--print-tracks);
+  }
 }

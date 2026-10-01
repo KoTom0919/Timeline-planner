@@ -2,11 +2,8 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
     <title>工程表作成</title>
-
     <link rel="stylesheet" href="style.css" />
   </head>
 
@@ -14,7 +11,6 @@
     <header class="topbar">
       <div>
         <p class="eyebrow">WORK SCHEDULER</p>
-
         <h1>工程表作成</h1>
       </div>
 
@@ -46,7 +42,6 @@
         <div class="section-head">
           <div>
             <h2>全体設定</h2>
-
             <p id="overallSettingsDescription">
               作業時間とメンバーを入力します
             </p>
@@ -56,7 +51,6 @@
         <div class="overall-time">
           <label>
             <span id="workStartLabel">開始日時</span>
-
             <input
               id="workStart"
               type="text"
@@ -67,7 +61,6 @@
 
           <label>
             <span id="workEndLabel">終了日時</span>
-
             <input
               id="workEnd"
               type="text"
@@ -102,7 +95,6 @@
 
         <div class="sub-head">
           <h3>メンバー</h3>
-
           <button id="addMember" class="secondary" type="button">
             ＋ メンバーを追加
           </button>
@@ -115,7 +107,6 @@
         <div class="section-head">
           <div>
             <h2>作業カード</h2>
-
             <p>
               上にあるカードほど優先度が高く、
               開始日時なしの作業は空き時間へ配置します
@@ -134,7 +125,6 @@
         <div class="section-head">
           <div>
             <h2>工程表</h2>
-
             <p id="resultMessage">
               「工程表を作成」を押すと表示されます
             </p>
@@ -147,6 +137,25 @@
           >
             工程表を印刷
           </button>
+        </div>
+
+        <div class="axis-controls">
+          <label for="axisZoom">横軸の幅（最小単位あたり）</label>
+
+          <input
+            id="axisZoom"
+            type="range"
+            min="10"
+            max="100"
+            step="1"
+            value="24"
+          />
+
+          <output id="axisZoomValue" for="axisZoom">24px</output>
+
+          <span>
+            二重線：全員に作業・休憩のない時間帯を省略
+          </span>
         </div>
 
         <div id="resultArea" class="result-scroll">

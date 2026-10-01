@@ -9,24 +9,24 @@ const COLORS = [
   "#ac8ee6",
   "#f28d75",
   "#75b95b",
-  "#e99ac2",
+  "#e99ac2"
 ];
 
 let baseAvailability = {
   start: "07:00",
-  end: "20:00",
+  end: "20:00"
 };
 
 let members = [
   member("A", "一般"),
   member("B", "一般"),
-  member("C", "一般"),
+  member("C", "一般")
 ];
 
 let tasks = [
   task("作業1", 480, 2, ""),
   task("作業2", 240, 2, ""),
-  task("作業3", 120, 1, ""),
+  task("作業3", 120, 1, "")
 ];
 
 let draggedTaskId = null;
@@ -46,24 +46,20 @@ function revealAddedItem(selector) {
   requestAnimationFrame(() => {
     const target = document.querySelector(selector);
 
-    if (!target) {
-      return;
-    }
+    if (!target) return;
 
     target.scrollIntoView({
       behavior: "smooth",
-      block: "center",
+      block: "center"
     });
 
     const input = target.querySelector(
-      'input:not([type="hidden"]), select, textarea',
+      'input:not([type="hidden"]), select, textarea'
     );
 
     if (input) {
       window.setTimeout(() => {
-        input.focus({
-          preventScroll: true,
-        });
+        input.focus({ preventScroll: true });
       }, 350);
     }
   });
@@ -80,9 +76,7 @@ refreshForStepUnit();
 
 $("addMember").onclick = () => {
   const newMember = member();
-
   newMember.availability = baseAvailabilityForPeriod();
-
   members.push(newMember);
 
   save();
@@ -93,9 +87,7 @@ $("addMember").onclick = () => {
 
 $("addTask").onclick = () => {
   const newTask = task();
-
   newTask.color = COLORS[tasks.length % COLORS.length];
-
   tasks.push(newTask);
 
   save();
@@ -141,14 +133,14 @@ if (stepValueEl && stepUnitEl) {
   const updateStep = () => {
     const value = Math.max(
       1,
-      Math.round(Number(stepValueEl.value) || 1),
+      Math.round(Number(stepValueEl.value) || 1)
     );
 
     stepValueEl.value = value;
 
     scheduleStep = {
       value,
-      unit: stepUnitEl.value,
+      unit: stepUnitEl.value
     };
 
     STEP = stepToMinutes(scheduleStep);
@@ -174,7 +166,7 @@ function member(name = "", skills = "") {
     name,
     skills,
     availability: null,
-    restRules: [],
+    restRules: []
   };
 }
 
@@ -183,7 +175,7 @@ function defaultAvailability() {
     baseAvailabilityForPeriod()[0] || {
       id: id(),
       start: dateTimeOnWorkDate(baseAvailability.start),
-      end: dateTimeOnWorkDate(baseAvailability.end),
+      end: dateTimeOnWorkDate(baseAvailability.end)
     }
   );
 }
@@ -196,13 +188,8 @@ function baseAvailabilityForPeriod() {
     return [];
   }
 
-  const startMinutes = timeOnlyToMinutes(
-    baseAvailability.start,
-  );
-
-  const endMinutes = timeOnlyToMinutes(
-    baseAvailability.end,
-  );
+  const startMinutes = timeOnlyToMinutes(baseAvailability.start);
+  const endMinutes = timeOnlyToMinutes(baseAvailability.end);
 
   if (
     startMinutes === null ||
@@ -217,13 +204,13 @@ function baseAvailabilityForPeriod() {
   const currentDate = new Date(
     workStart.getFullYear(),
     workStart.getMonth(),
-    workStart.getDate(),
+    workStart.getDate()
   );
 
   const lastDate = new Date(
     workEnd.getFullYear(),
     workEnd.getMonth(),
-    workEnd.getDate(),
+    workEnd.getDate()
   );
 
   while (currentDate <= lastDate) {
@@ -232,7 +219,7 @@ function baseAvailabilityForPeriod() {
       currentDate.getMonth(),
       currentDate.getDate(),
       Math.floor(startMinutes / 60),
-      startMinutes % 60,
+      startMinutes % 60
     );
 
     const dailyEnd = new Date(
@@ -240,22 +227,22 @@ function baseAvailabilityForPeriod() {
       currentDate.getMonth(),
       currentDate.getDate(),
       Math.floor(endMinutes / 60),
-      endMinutes % 60,
+      endMinutes % 60
     );
 
     const actualStart = new Date(
-      Math.max(dailyStart.getTime(), workStart.getTime()),
+      Math.max(dailyStart.getTime(), workStart.getTime())
     );
 
     const actualEnd = new Date(
-      Math.min(dailyEnd.getTime(), workEnd.getTime()),
+      Math.min(dailyEnd.getTime(), workEnd.getTime())
     );
 
     if (actualEnd > actualStart) {
       availability.push({
         id: id(),
         start: localDateTime(actualStart),
-        end: localDateTime(actualEnd),
+        end: localDateTime(actualEnd)
       });
     }
 
@@ -268,8 +255,7 @@ function baseAvailabilityForPeriod() {
 function initializeMemberAvailability() {
   members.forEach((currentMember) => {
     if (!Array.isArray(currentMember.availability)) {
-      currentMember.availability =
-        baseAvailabilityForPeriod();
+      currentMember.availability = baseAvailabilityForPeriod();
     }
 
     if (!Array.isArray(currentMember.restRules)) {
@@ -281,10 +267,7 @@ function initializeMemberAvailability() {
 function setupBaseAvailabilitySettings() {
   const addMemberButton = $("addMember");
 
-  if (
-    !addMemberButton ||
-    $("baseAvailabilitySettings")
-  ) {
+  if (!addMemberButton || $("baseAvailabilitySettings")) {
     return;
   }
 
@@ -294,16 +277,15 @@ function setupBaseAvailabilitySettings() {
     () => {
       startInput.value = baseAvailability.start;
       endInput.value = baseAvailability.end;
-
       modal.classList.add("show");
-    },
+    }
   );
 
   settingsButton.id = "baseAvailabilitySettings";
 
   addMemberButton.parentElement.insertBefore(
     settingsButton,
-    addMemberButton,
+    addMemberButton
   );
 
   const modal = el("div", "base-modal");
@@ -318,7 +300,6 @@ function setupBaseAvailabilitySettings() {
   const actions = el("div", "base-modal-actions");
 
   heading.textContent = "稼働時間の基底設定";
-
   description.textContent =
     "「基底に揃える」を押したメンバーに適用される時間です";
 
@@ -330,16 +311,8 @@ function setupBaseAvailabilitySettings() {
   endInput.step = "900";
   endInput.value = baseAvailability.end;
 
-  startLabel.append(
-    label("開始時刻"),
-    startInput,
-  );
-
-  endLabel.append(
-    label("終了時刻"),
-    endInput,
-  );
-
+  startLabel.append(label("開始時刻"), startInput);
+  endLabel.append(label("終了時刻"), endInput);
   fields.append(startLabel, endLabel);
 
   const closeModal = () => {
@@ -347,62 +320,37 @@ function setupBaseAvailabilitySettings() {
   };
 
   actions.append(
-    button(
-      "キャンセル",
-      "secondary",
-      closeModal,
-    ),
+    button("キャンセル", "secondary", closeModal),
     button("保存", "primary", () => {
-      const startMinutes = timeOnlyToMinutes(
-        startInput.value,
-      );
-
-      const endMinutes = timeOnlyToMinutes(
-        endInput.value,
-      );
+      const startMinutes = timeOnlyToMinutes(startInput.value);
+      const endMinutes = timeOnlyToMinutes(endInput.value);
 
       if (
         startMinutes === null ||
         endMinutes === null ||
         endMinutes <= startMinutes
       ) {
-        toast(
-          "基底の開始時刻と終了時刻を確認してください",
-        );
-
+        toast("基底の開始時刻と終了時刻を確認してください");
         return;
       }
 
-      if (
-        startMinutes % STEP ||
-        endMinutes % STEP
-      ) {
-        toast(
-          `基底時間は${stepLabel()}単位で設定してください`,
-        );
-
+      if (startMinutes % STEP || endMinutes % STEP) {
+        toast(`基底時間は${stepLabel()}単位で設定してください`);
         return;
       }
 
       baseAvailability = {
         start: startInput.value,
-        end: endInput.value,
+        end: endInput.value
       };
 
       save();
       closeModal();
-
       toast("稼働時間の基底を保存しました");
-    }),
+    })
   );
 
-  panel.append(
-    heading,
-    description,
-    fields,
-    actions,
-  );
-
+  panel.append(heading, description, fields, actions);
   modal.append(panel);
 
   modal.onclick = (event) => {
@@ -415,21 +363,14 @@ function setupBaseAvailabilitySettings() {
 }
 
 function timeOnlyToMinutes(value) {
-  const match = String(value || "").match(
-    /^(\d{2}):(\d{2})$/,
-  );
+  const match = String(value || "").match(/^(\d{2}):(\d{2})$/);
 
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   const hours = Number(match[1]);
   const minutes = Number(match[2]);
 
-  if (
-    hours > 23 ||
-    minutes > 59
-  ) {
+  if (hours > 23 || minutes > 59) {
     return null;
   }
 
@@ -440,13 +381,10 @@ function stepToMinutes(step) {
   const multiplier = {
     minute: 1,
     hour: 60,
-    day: 1440,
+    day: 1440
   }[step.unit] || 1;
 
-  return (
-    Math.max(1, Number(step.value) || 1) *
-    multiplier
-  );
+  return Math.max(1, Number(step.value) || 1) * multiplier;
 }
 
 function syncStepInputs() {
@@ -465,7 +403,7 @@ function stepLabel() {
   const unitLabel = {
     minute: "分",
     hour: "時間",
-    day: "日",
+    day: "日"
   }[scheduleStep.unit] || "分";
 
   return `${scheduleStep.value}${unitLabel}`;
@@ -478,47 +416,31 @@ function isDayMode() {
 function startOfDateValue(value) {
   const date = parseDateTime(value);
 
-  if (!date) {
-    return value;
-  }
+  if (!date) return value;
 
   return localDateTime(
     new Date(
       date.getFullYear(),
       date.getMonth(),
-      date.getDate(),
-    ),
+      date.getDate()
+    )
   );
 }
 
 function scheduleBounds() {
-  const start = toMin(
-    startOfDateValue(startEl.value),
-  );
+  const start = toMin(startOfDateValue(startEl.value));
+  let end = toMin(startOfDateValue(endEl.value));
 
-  let end = toMin(
-    startOfDateValue(endEl.value),
-  );
-
-  /*
-   * 日単位の場合、終了日も工程期間に含めます。
-   * 例：9月1日～9月3日は3日間です。
-   */
+  // 日単位の場合は終了日も含める
   if (isDayMode() && end !== null) {
     end += 1440;
   }
 
-  return {
-    start,
-    end,
-  };
+  return { start, end };
 }
 
 function refreshForStepUnit() {
-  document.body.classList.toggle(
-    "day-mode",
-    isDayMode(),
-  );
+  document.body.classList.toggle("day-mode", isDayMode());
 
   $("workStartLabel").textContent =
     isDayMode() ? "開始日" : "開始日時";
@@ -532,9 +454,7 @@ function refreshForStepUnit() {
       : "作業時間とメンバーを入力します";
 
   document
-    .querySelectorAll(
-      ".overall-time .datetime-input",
-    )
+    .querySelectorAll(".overall-time .datetime-input")
     .forEach((element) => {
       element.remove();
     });
@@ -551,7 +471,7 @@ function task(
   name = "",
   minutes = 60,
   people = 1,
-  skill = "",
+  skill = ""
 ) {
   return {
     id: id(),
@@ -563,7 +483,7 @@ function task(
     before: "",
     interruptible: true,
     shareable: false,
-    color: "",
+    color: ""
   };
 }
 
@@ -576,15 +496,8 @@ function renderMembers() {
   memberList.innerHTML = "";
 
   members.forEach((currentMember) => {
-    const card = el(
-      "article",
-      "member-card",
-    );
-
-    const memberMain = el(
-      "div",
-      "member-main",
-    );
+    const card = el("article", "member-card");
+    const memberMain = el("div", "member-main");
 
     memberMain.append(
       textField(
@@ -592,7 +505,7 @@ function renderMembers() {
         currentMember.name,
         (value) => {
           currentMember.name = value;
-        },
+        }
       ),
       textField(
         "専門（複数は読点・カンマ区切り）",
@@ -601,495 +514,334 @@ function renderMembers() {
           currentMember.skills = value;
         },
         "",
-        renderTasks,
+        renderTasks
       ),
       button("削除", "delete", () => {
         members = members.filter(
-          (memberItem) =>
-            memberItem.id !== currentMember.id,
+          (memberItem) => memberItem.id !== currentMember.id
         );
 
         save();
         render();
-      }),
+      })
     );
 
-    /*
-     * 日単位では、稼働時間と休憩の設定を
-     * 表示しません。
-     */
+    // 日単位では稼働時間・休憩の入力欄を表示しない
     if (isDayMode()) {
       card.append(memberMain);
       memberList.append(card);
-
       return;
     }
 
-    const availabilityBox = el(
-      "div",
-      "break-box",
-    );
+    const availabilityBox = el("div", "break-box");
+    const availabilityHeader = el("div", "break-head");
 
-    const availabilityHeader = el(
-      "div",
-      "break-head",
-    );
+    availabilityHeader.innerHTML = "<strong>稼働時間</strong>";
 
-    availabilityHeader.innerHTML =
-      "<strong>稼働時間</strong>";
-
-    const availabilityActions = el(
-      "div",
-      "availability-actions",
-    );
+    const availabilityActions = el("div", "availability-actions");
 
     availabilityActions.append(
       button(
         "基底に揃える",
         "small basis-button",
         () => {
-          currentMember.availability =
-            baseAvailabilityForPeriod();
+          currentMember.availability = baseAvailabilityForPeriod();
 
           save();
           renderMembers();
-        },
+        }
       ),
-      button(
-        "＋ 稼働時間を追加",
-        "small",
-        () => {
-          currentMember.availability.push({
-            id: id(),
-            start: dateTimeOnWorkDate(
-              baseAvailability.start,
-            ),
-            end: dateTimeOnWorkDate(
-              baseAvailability.end,
-            ),
-          });
+      button("＋ 稼働時間を追加", "small", () => {
+        currentMember.availability.push({
+          id: id(),
+          start: dateTimeOnWorkDate(baseAvailability.start),
+          end: dateTimeOnWorkDate(baseAvailability.end)
+        });
 
-          save();
-          renderMembers();
-        },
-      ),
+        save();
+        renderMembers();
+      })
     );
 
-    availabilityHeader.append(
-      availabilityActions,
-    );
+    availabilityHeader.append(availabilityActions);
 
-    const availabilityList = el(
-      "div",
-      "break-list",
-    );
+    const availabilityList = el("div", "break-list");
 
     if (!currentMember.availability.length) {
       availabilityList.innerHTML =
         '<p class="muted">稼働時間なし（全時間が休憩になります）</p>';
     }
 
-    currentMember.availability.forEach(
-      (availability) => {
-        const row = el(
-          "div",
-          "break-row",
-        );
+    currentMember.availability.forEach((availability) => {
+      const row = el("div", "break-row");
 
-        row.append(
-          timeInput(
-            availability.start,
-            (value) => {
-              availability.start = value;
-            },
-            "稼働開始",
-          ),
-          span("～", "dash"),
-          timeInput(
-            availability.end,
-            (value) => {
-              availability.end = value;
-            },
-            "稼働終了",
-          ),
-          button("削除", "delete", () => {
-            currentMember.availability =
-              currentMember.availability.filter(
-                (item) =>
-                  item.id !== availability.id,
-              );
-
-            save();
-            renderMembers();
-          }),
-        );
-
-        availabilityList.append(row);
-      },
-    );
-
-    availabilityBox.append(
-      availabilityHeader,
-      availabilityList,
-    );
-
-    const restBox = el(
-      "div",
-      "break-box",
-    );
-
-    const restHeader = el(
-      "div",
-      "break-head",
-    );
-
-    restHeader.innerHTML =
-      "<strong>休憩</strong>";
-
-    restHeader.append(
-      button(
-        "＋ 休憩を追加",
-        "small",
-        () => {
-          currentMember.restRules.push({
-            id: id(),
-            type: "flexible",
-            minutes: 60,
-            start:
-              dateTimeOnWorkDate("12:00"),
-            end:
-              dateTimeOnWorkDate("13:00"),
-          });
+      row.append(
+        timeInput(
+          availability.start,
+          (value) => {
+            availability.start = value;
+          },
+          "稼働開始"
+        ),
+        span("～", "dash"),
+        timeInput(
+          availability.end,
+          (value) => {
+            availability.end = value;
+          },
+          "稼働終了"
+        ),
+        button("削除", "delete", () => {
+          currentMember.availability =
+            currentMember.availability.filter(
+              (item) => item.id !== availability.id
+            );
 
           save();
           renderMembers();
-        },
-      ),
+        })
+      );
+
+      availabilityList.append(row);
+    });
+
+    availabilityBox.append(
+      availabilityHeader,
+      availabilityList
     );
 
-    const restList = el(
-      "div",
-      "break-list",
+    const restBox = el("div", "break-box");
+    const restHeader = el("div", "break-head");
+
+    restHeader.innerHTML = "<strong>休憩</strong>";
+
+    restHeader.append(
+      button("＋ 休憩を追加", "small", () => {
+        currentMember.restRules.push({
+          id: id(),
+          type: "flexible",
+          minutes: 60,
+          start: dateTimeOnWorkDate("12:00"),
+          end: dateTimeOnWorkDate("13:00")
+        });
+
+        save();
+        renderMembers();
+      })
     );
+
+    const restList = el("div", "break-list");
 
     if (!currentMember.restRules.length) {
       restList.innerHTML =
         '<p class="muted">個別の休憩設定なし</p>';
     }
 
-    currentMember.restRules.forEach(
-      (restRule) => {
-        const row = el(
-          "div",
-          "rest-row",
+    currentMember.restRules.forEach((restRule) => {
+      const row = el("div", "rest-row");
+      const typeSelect = document.createElement("select");
+
+      [
+        ["flexible", "各稼働時間内に"],
+        ["fixed", "時間を固定"]
+      ].forEach(([value, text]) => {
+        const option = document.createElement("option");
+
+        option.value = value;
+        option.textContent = text;
+        option.selected = restRule.type === value;
+
+        typeSelect.append(option);
+      });
+
+      typeSelect.setAttribute("aria-label", "休憩の指定方法");
+
+      typeSelect.onchange = () => {
+        restRule.type = typeSelect.value;
+
+        save();
+        renderMembers();
+      };
+
+      row.append(typeSelect);
+
+      if (restRule.type === "fixed") {
+        const fixedFields = el("div", "rest-fixed-fields");
+
+        fixedFields.append(
+          timeInput(
+            restRule.start,
+            (value) => {
+              restRule.start = value;
+            },
+            "休憩開始"
+          ),
+          span("～", "dash"),
+          timeInput(
+            restRule.end,
+            (value) => {
+              restRule.end = value;
+            },
+            "休憩終了"
+          )
         );
 
-        const typeSelect =
-          document.createElement("select");
+        row.append(fixedFields);
+      } else {
+        const flexibleFields = el("label", "rest-flex-fields");
+        const minutesInput = document.createElement("input");
 
-        [
-          [
-            "flexible",
-            "各稼働時間内に",
-          ],
-          [
-            "fixed",
-            "時間を固定",
-          ],
-        ].forEach(([value, text]) => {
-          const option =
-            document.createElement("option");
-
-          option.value = value;
-          option.textContent = text;
-          option.selected =
-            restRule.type === value;
-
-          typeSelect.append(option);
-        });
-
-        typeSelect.setAttribute(
-          "aria-label",
-          "休憩の指定方法",
+        minutesInput.type = "number";
+        minutesInput.min = String(STEP);
+        minutesInput.step = String(STEP);
+        minutesInput.value = Math.max(
+          15,
+          Number(restRule.minutes) || 60
         );
 
-        typeSelect.onchange = () => {
-          restRule.type =
-            typeSelect.value;
+        minutesInput.setAttribute("aria-label", "休憩時間（分）");
+
+        minutesInput.oninput = () => {
+          restRule.minutes = Math.max(
+            15,
+            Math.round(Number(minutesInput.value) || 15)
+          );
+
+          save();
+        };
+
+        flexibleFields.append(
+          minutesInput,
+          span("分とる", "rest-unit")
+        );
+
+        row.append(flexibleFields);
+      }
+
+      row.append(
+        button("削除", "delete", () => {
+          currentMember.restRules =
+            currentMember.restRules.filter(
+              (item) => item.id !== restRule.id
+            );
 
           save();
           renderMembers();
-        };
+        })
+      );
 
-        row.append(typeSelect);
+      restList.append(row);
+    });
 
-        if (restRule.type === "fixed") {
-          const fixedFields = el(
-            "div",
-            "rest-fixed-fields",
-          );
-
-          fixedFields.append(
-            timeInput(
-              restRule.start,
-              (value) => {
-                restRule.start = value;
-              },
-              "休憩開始",
-            ),
-            span("～", "dash"),
-            timeInput(
-              restRule.end,
-              (value) => {
-                restRule.end = value;
-              },
-              "休憩終了",
-            ),
-          );
-
-          row.append(fixedFields);
-        } else {
-          const flexibleFields = el(
-            "label",
-            "rest-flex-fields",
-          );
-
-          const minutesInput =
-            document.createElement("input");
-
-          minutesInput.type = "number";
-          minutesInput.min = String(STEP);
-          minutesInput.step = String(STEP);
-
-          minutesInput.value = Math.max(
-            15,
-            Number(restRule.minutes) || 60,
-          );
-
-          minutesInput.setAttribute(
-            "aria-label",
-            "休憩時間（分）",
-          );
-
-          minutesInput.oninput = () => {
-            restRule.minutes = Math.max(
-              15,
-              Math.round(
-                Number(minutesInput.value) ||
-                  15,
-              ),
-            );
-
-            save();
-          };
-
-          flexibleFields.append(
-            minutesInput,
-            span("分とる", "rest-unit"),
-          );
-
-          row.append(flexibleFields);
-        }
-
-        row.append(
-          button("削除", "delete", () => {
-            currentMember.restRules =
-              currentMember.restRules.filter(
-                (item) =>
-                  item.id !== restRule.id,
-              );
-
-            save();
-            renderMembers();
-          }),
-        );
-
-        restList.append(row);
-      },
-    );
-
-    restBox.append(
-      restHeader,
-      restList,
-    );
-
-    card.append(
-      memberMain,
-      availabilityBox,
-      restBox,
-    );
-
+    restBox.append(restHeader, restList);
+    card.append(memberMain, availabilityBox, restBox);
     memberList.append(card);
   });
 }
+
 function renderTasks() {
   taskList.innerHTML = "";
 
   tasks.forEach((currentTask, index) => {
     currentTask.color =
-      currentTask.color ||
-      COLORS[index % COLORS.length];
+      currentTask.color || COLORS[index % COLORS.length];
 
     const card = el("article", "task-card");
 
-    card.style.setProperty(
-      "--card-color",
-      currentTask.color,
-    );
+    card.style.setProperty("--card-color", currentTask.color);
 
     const accent = el("div", "accent");
     const body = el("div", "task-body");
     const header = el("div", "card-head");
 
-    header.innerHTML =
-      `<p>優先順位 ${index + 1}</p>`;
+    header.innerHTML = `<p>優先順位 ${index + 1}</p>`;
 
-    const actions = el(
-      "div",
-      "card-actions",
-    );
+    const actions = el("div", "card-actions");
 
-    const upButton = button(
-      "↑",
-      "order-button",
-      () => {
-        moveTask(currentTask.id, -1);
-      },
-    );
+    const upButton = button("↑", "order-button", () => {
+      moveTask(currentTask.id, -1);
+    });
 
-    const downButton = button(
-      "↓",
-      "order-button",
-      () => {
-        moveTask(currentTask.id, 1);
-      },
-    );
+    const downButton = button("↓", "order-button", () => {
+      moveTask(currentTask.id, 1);
+    });
 
-    const dragHandle = span(
-      "↕",
-      "drag-handle",
-    );
+    const dragHandle = span("↕", "drag-handle");
 
     upButton.disabled = index === 0;
+    downButton.disabled = index === tasks.length - 1;
 
-    downButton.disabled =
-      index === tasks.length - 1;
-
-    upButton.title =
-      "優先順位を上げる";
-
-    downButton.title =
-      "優先順位を下げる";
-
-    dragHandle.title =
-      "ドラッグして並べ替え";
-
+    upButton.title = "優先順位を上げる";
+    downButton.title = "優先順位を下げる";
+    dragHandle.title = "ドラッグして並べ替え";
     dragHandle.draggable = true;
 
-    dragHandle.addEventListener(
-      "dragstart",
-      (event) => {
-        draggedTaskId = currentTask.id;
+    dragHandle.addEventListener("dragstart", (event) => {
+      draggedTaskId = currentTask.id;
+      card.classList.add("dragging");
 
-        card.classList.add("dragging");
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("text/plain", currentTask.id);
+    });
 
-        event.dataTransfer.effectAllowed =
-          "move";
+    dragHandle.addEventListener("dragend", () => {
+      draggedTaskId = null;
 
-        event.dataTransfer.setData(
-          "text/plain",
-          currentTask.id,
-        );
-      },
-    );
+      document.querySelectorAll(".task-card").forEach((taskCard) => {
+        taskCard.classList.remove("dragging", "drag-over");
+      });
+    });
 
-    dragHandle.addEventListener(
-      "dragend",
-      () => {
-        draggedTaskId = null;
+    card.addEventListener("dragover", (event) => {
+      event.preventDefault();
 
-        document
-          .querySelectorAll(".task-card")
-          .forEach((taskCard) => {
-            taskCard.classList.remove(
-              "dragging",
-              "drag-over",
-            );
-          });
-      },
-    );
+      if (
+        draggedTaskId &&
+        draggedTaskId !== currentTask.id
+      ) {
+        card.classList.add("drag-over");
+      }
+    });
 
-    card.addEventListener(
-      "dragover",
-      (event) => {
-        event.preventDefault();
+    card.addEventListener("dragleave", () => {
+      card.classList.remove("drag-over");
+    });
 
-        if (
-          draggedTaskId &&
-          draggedTaskId !== currentTask.id
-        ) {
-          card.classList.add("drag-over");
-        }
-      },
-    );
+    card.addEventListener("drop", (event) => {
+      event.preventDefault();
+      card.classList.remove("drag-over");
 
-    card.addEventListener(
-      "dragleave",
-      () => {
-        card.classList.remove("drag-over");
-      },
-    );
+      const sourceId =
+        draggedTaskId ||
+        event.dataTransfer.getData("text/plain");
 
-    card.addEventListener(
-      "drop",
-      (event) => {
-        event.preventDefault();
+      const insertAfter =
+        event.clientY >
+        card.getBoundingClientRect().top + card.offsetHeight / 2;
 
-        card.classList.remove("drag-over");
-
-        const sourceId =
-          draggedTaskId ||
-          event.dataTransfer.getData(
-            "text/plain",
-          );
-
-        const insertAfter =
-          event.clientY >
-          card.getBoundingClientRect().top +
-            card.offsetHeight / 2;
-
-        reorderTask(
-          sourceId,
-          currentTask.id,
-          insertAfter,
-        );
-      },
-    );
+      reorderTask(sourceId, currentTask.id, insertAfter);
+    });
 
     actions.append(
       upButton,
       downButton,
       dragHandle,
       button("削除", "delete", () => {
-        const deletedId =
-          currentTask.id;
+        const deletedId = currentTask.id;
 
         tasks = tasks.filter(
-          (taskItem) =>
-            taskItem.id !== deletedId,
+          (taskItem) => taskItem.id !== deletedId
         );
 
         tasks.forEach((taskItem) => {
-          if (
-            taskItem.before === deletedId
-          ) {
+          if (taskItem.before === deletedId) {
             taskItem.before = "";
           }
         });
 
         save();
         renderTasks();
-      }),
+      })
     );
 
     header.append(actions);
@@ -1103,73 +855,50 @@ function renderTasks() {
         (value) => {
           currentTask.name = value;
         },
-        "wide",
+        "wide"
       ),
-
       numberField(
-        isDayMode()
-          ? "所要日数"
-          : "所要時間（分）",
-
+        isDayMode() ? "所要日数" : "所要時間（分）",
         isDayMode()
           ? Math.max(
               1,
-              Math.ceil(
-                Number(
-                  currentTask.minutes,
-                ) / 1440,
-              ),
+              Math.ceil(Number(currentTask.minutes) / 1440)
             )
           : currentTask.minutes,
-
         (value) => {
-          currentTask.minutes =
-            isDayMode()
-              ? value * 1440
-              : value;
-        },
+          currentTask.minutes = isDayMode() ? value * 1440 : value;
+        }
       ),
-
       optionalTime(
-        isDayMode()
-          ? "開始日（任意）"
-          : "開始日時（任意）",
-
+        isDayMode() ? "開始日（任意）" : "開始日時（任意）",
         currentTask.start,
-
         (value) => {
           currentTask.start = value;
-        },
+        }
       ),
-
       numberField(
         "必要人数（最低人数）",
         currentTask.people,
         (value) => {
           currentTask.people = value;
-        },
+        }
       ),
-
       skillField(currentTask),
       beforeField(currentTask),
-
       checkField(
         "中断可能",
         currentTask.interruptible,
         (checked) => {
-          currentTask.interruptible =
-            checked;
-        },
+          currentTask.interruptible = checked;
+        }
       ),
-
       checkField(
         "分担可能（空き人員も参加）",
         currentTask.shareable,
         (checked) => {
-          currentTask.shareable =
-            checked;
-        },
-      ),
+          currentTask.shareable = checked;
+        }
+      )
     );
 
     body.append(header, fields);
@@ -1183,17 +912,12 @@ function textField(
   value,
   onChange,
   className = "",
-  changeHandler = null,
+  changeHandler = null
 ) {
-  const wrapper = el(
-    "label",
-    className,
-  );
-
+  const wrapper = el("label", className);
   wrapper.append(label(fieldLabel));
 
-  const input =
-    document.createElement("input");
+  const input = document.createElement("input");
 
   input.type = "text";
   input.value = value;
@@ -1212,18 +936,11 @@ function textField(
   return wrapper;
 }
 
-function numberField(
-  fieldLabel,
-  value,
-  onChange,
-) {
-  const wrapper =
-    el("label");
-
+function numberField(fieldLabel, value, onChange) {
+  const wrapper = el("label");
   wrapper.append(label(fieldLabel));
 
-  const input =
-    document.createElement("input");
+  const input = document.createElement("input");
 
   input.type = "number";
   input.min = "1";
@@ -1233,9 +950,7 @@ function numberField(
   input.oninput = () => {
     const normalizedValue = Math.max(
       1,
-      Math.round(
-        Number(input.value) || 1,
-      ),
+      Math.round(Number(input.value) || 1)
     );
 
     onChange(normalizedValue);
@@ -1247,20 +962,14 @@ function numberField(
   return wrapper;
 }
 
-function optionalTime(
-  fieldLabel,
-  value,
-  onChange,
-) {
-  const wrapper =
-    el("label");
-
+function optionalTime(fieldLabel, value, onChange) {
+  const wrapper = el("label");
   wrapper.append(label(fieldLabel));
 
   const control = dateTextInput(
     value,
     onChange,
-    "開始日時",
+    "開始日時"
   );
 
   wrapper.append(control);
@@ -1268,123 +977,67 @@ function optionalTime(
   return wrapper;
 }
 
-function timeInput(
-  value,
-  onChange,
-  ariaLabel,
-) {
-  return dateTextInput(
-    value,
-    onChange,
-    ariaLabel,
-  );
+function timeInput(value, onChange, ariaLabel) {
+  return dateTextInput(value, onChange, ariaLabel);
 }
 
-function dateTextInput(
-  value,
-  onChange,
-  ariaLabel,
-) {
-  return buildDateTimeControl(
-    value,
-    onChange,
-    ariaLabel,
-  );
+function dateTextInput(value, onChange, ariaLabel) {
+  return buildDateTimeControl(value, onChange, ariaLabel);
 }
 
 function enhanceOverallDateTimeInputs() {
   [
-    [
-      startEl,
-      "全体の開始日時",
-    ],
-    [
-      endEl,
-      "全体の終了日時",
-    ],
-  ].forEach(
-    ([hiddenInput, ariaLabel]) => {
-      if (
-        !hiddenInput ||
-        hiddenInput.dataset.enhanced
-      ) {
-        return;
-      }
+    [startEl, "全体の開始日時"],
+    [endEl, "全体の終了日時"]
+  ].forEach(([hiddenInput, ariaLabel]) => {
+    if (!hiddenInput || hiddenInput.dataset.enhanced) {
+      return;
+    }
 
-      const control =
-        buildDateTimeControl(
-          hiddenInput.value,
-          (value) => {
-            hiddenInput.value = value;
-          },
-          ariaLabel,
-        );
+    const control = buildDateTimeControl(
+      hiddenInput.value,
+      (value) => {
+        hiddenInput.value = value;
+      },
+      ariaLabel
+    );
 
-      hiddenInput.dataset.enhanced =
-        "true";
+    hiddenInput.dataset.enhanced = "true";
+    hiddenInput.type = "hidden";
 
-      hiddenInput.type = "hidden";
-
-      hiddenInput.parentElement.insertBefore(
-        control,
-        hiddenInput,
-      );
-    },
-  );
+    hiddenInput.parentElement.insertBefore(
+      control,
+      hiddenInput
+    );
+  });
 }
 
-function buildDateTimeControl(
-  value,
-  onChange,
-  ariaLabel,
-) {
-  const wrapper = el(
-    "div",
-    "datetime-input",
-  );
+function buildDateTimeControl(value, onChange, ariaLabel) {
+  const wrapper = el("div", "datetime-input");
+  const dateInput = document.createElement("input");
+  const timeInputElement = document.createElement("input");
 
-  const dateInput =
-    document.createElement("input");
-
-  const timeInputElement =
-    document.createElement("input");
-
-  const parsedDate = parseDateTime(
-    normalizeDateTime(value),
-  );
+  const parsedDate = parseDateTime(normalizeDateTime(value));
 
   dateInput.type = "date";
-
-  dateInput.setAttribute(
-    "aria-label",
-    ariaLabel + "の日付",
-  );
+  dateInput.setAttribute("aria-label", ariaLabel + "の日付");
 
   timeInputElement.type = "text";
   timeInputElement.inputMode = "numeric";
   timeInputElement.placeholder = "09:00";
   timeInputElement.maxLength = 5;
-
   timeInputElement.setAttribute(
     "aria-label",
-    ariaLabel + "の時刻",
+    ariaLabel + "の時刻"
   );
 
   if (parsedDate) {
-    const normalized =
-      localDateTime(parsedDate);
+    const normalized = localDateTime(parsedDate);
 
-    dateInput.value =
-      normalized.slice(0, 10);
-
-    timeInputElement.value =
-      normalized.slice(11, 16);
+    dateInput.value = normalized.slice(0, 10);
+    timeInputElement.value = normalized.slice(11, 16);
   }
 
-  /*
-   * 日単位の場合は時刻入力欄を
-   * 表示しません。
-   */
   if (isDayMode()) {
     timeInputElement.hidden = true;
   }
@@ -1393,48 +1046,32 @@ function buildDateTimeControl(
     if (!dateInput.value) {
       onChange("");
       save();
-
       return;
     }
 
     if (isDayMode()) {
-      onChange(
-        dateInput.value + " 00:00",
-      );
-
+      onChange(dateInput.value + " 00:00");
       save();
-
       return;
     }
 
-    if (
-      !timeInputElement.value.trim()
-    ) {
+    if (!timeInputElement.value.trim()) {
       return;
     }
 
     const normalizedTime =
-      normalizeTypedTime(
-        timeInputElement.value,
-      );
+      normalizeTypedTime(timeInputElement.value);
 
     if (!normalizedTime) {
-      toast(
-        "時刻は「09:00」の形式で入力してください",
-      );
-
+      toast("時刻は「09:00」の形式で入力してください");
       return;
     }
 
     const dateTimeValue =
-      dateInput.value +
-      " " +
-      normalizedTime;
+      dateInput.value + " " + normalizedTime;
 
     if (parseDateTime(dateTimeValue)) {
-      timeInputElement.value =
-        normalizedTime;
-
+      timeInputElement.value = normalizedTime;
       onChange(dateTimeValue);
       save();
     } else {
@@ -1443,13 +1080,9 @@ function buildDateTimeControl(
   };
 
   dateInput.onchange = updateValue;
-  timeInputElement.onchange =
-    updateValue;
+  timeInputElement.onchange = updateValue;
 
-  wrapper.append(
-    dateInput,
-    timeInputElement,
-  );
+  wrapper.append(dateInput, timeInputElement);
 
   return wrapper;
 }
@@ -1463,24 +1096,14 @@ function normalizeTypedTime(value) {
   let minutes;
 
   if (/^\d{3,4}$/.test(text)) {
-    const padded =
-      text.padStart(4, "0");
+    const padded = text.padStart(4, "0");
 
-    hours = Number(
-      padded.slice(0, 2),
-    );
-
-    minutes = Number(
-      padded.slice(2, 4),
-    );
+    hours = Number(padded.slice(0, 2));
+    minutes = Number(padded.slice(2, 4));
   } else {
-    const match = text.match(
-      /^(\d{1,2}):(\d{1,2})$/,
-    );
+    const match = text.match(/^(\d{1,2}):(\d{1,2})$/);
 
-    if (!match) {
-      return null;
-    }
+    if (!match) return null;
 
     hours = Number(match[1]);
     minutes = Number(match[2]);
@@ -1503,96 +1126,62 @@ function normalizeTypedTime(value) {
 }
 
 function skillField(currentTask) {
-  const wrapper = el(
-    "fieldset",
-    "skill-checkbox-field",
-  );
-
+  const wrapper = el("fieldset", "skill-checkbox-field");
   const heading = el("legend");
 
-  heading.textContent =
-    "専門性（複数選択可）";
-
+  heading.textContent = "専門性（複数選択可）";
   wrapper.append(heading);
 
   const registeredSkills = [
     ...new Set(
       members.flatMap(
-        (currentMember) =>
-          skills(currentMember.skills),
-      ),
-    ),
+        (currentMember) => skills(currentMember.skills)
+      )
+    )
   ];
 
-  const selectedSkills =
-    skills(currentTask.skill);
+  const selectedSkills = skills(currentTask.skill);
 
-  /*
-   * 保存済みの専門がメンバー欄から
-   * 削除されていても表示できるようにします。
-   */
   const choices = [
     ...new Set([
       ...registeredSkills,
-      ...selectedSkills,
-    ]),
+      ...selectedSkills
+    ])
   ];
 
   if (!choices.length) {
-    const emptyMessage = el(
-      "p",
-      "skill-empty",
-    );
+    const emptyMessage = el("p", "skill-empty");
 
     emptyMessage.textContent =
       "メンバーの専門を先に入力してください";
 
     wrapper.append(emptyMessage);
-
     return wrapper;
   }
 
-  const checkboxList = el(
-    "div",
-    "skill-checkbox-list",
-  );
+  const checkboxList = el("div", "skill-checkbox-list");
 
   choices.forEach((skillName) => {
-    const item = el(
-      "label",
-      "skill-checkbox-item",
-    );
-
-    const checkbox =
-      document.createElement("input");
-
-    const text =
-      document.createElement("span");
+    const item = el("label", "skill-checkbox-item");
+    const checkbox = document.createElement("input");
+    const text = document.createElement("span");
 
     checkbox.type = "checkbox";
     checkbox.value = skillName;
+    checkbox.checked = selectedSkills.includes(skillName);
 
-    checkbox.checked =
-      selectedSkills.includes(skillName);
-
-    text.textContent =
-      registeredSkills.includes(skillName)
-        ? skillName
-        : `${skillName}（未登録）`;
+    text.textContent = registeredSkills.includes(skillName)
+      ? skillName
+      : `${skillName}（未登録）`;
 
     checkbox.onchange = () => {
       const checkedSkills = [
         ...checkboxList.querySelectorAll(
-          'input[type="checkbox"]:checked',
-        ),
-      ].map(
-        (checkedCheckbox) =>
-          checkedCheckbox.value,
-      );
+          'input[type="checkbox"]:checked'
+        )
+      ].map((checkedCheckbox) => checkedCheckbox.value);
 
-      currentTask.skill =
-        checkedSkills.join("、");
-
+      currentTask.skill = checkedSkills.join("、");
       save();
     };
 
@@ -1606,47 +1195,27 @@ function skillField(currentTask) {
 }
 
 function beforeField(currentTask) {
-  const wrapper =
-    el("label");
+  const wrapper = el("label");
+  wrapper.append(label("前工程（任意）"));
 
-  wrapper.append(
-    label("前工程（任意）"),
-  );
+  const select = document.createElement("select");
 
-  const select =
-    document.createElement("select");
-
-  select.innerHTML =
-    '<option value="">なし</option>';
+  select.innerHTML = '<option value="">なし</option>';
 
   tasks
-    .filter(
-      (taskItem) =>
-        taskItem.id !== currentTask.id,
-    )
+    .filter((taskItem) => taskItem.id !== currentTask.id)
     .forEach((taskItem) => {
-      const option =
-        document.createElement(
-          "option",
-        );
+      const option = document.createElement("option");
 
       option.value = taskItem.id;
-
-      option.textContent =
-        taskItem.name ||
-        "名称未入力";
-
-      option.selected =
-        currentTask.before ===
-        taskItem.id;
+      option.textContent = taskItem.name || "名称未入力";
+      option.selected = currentTask.before === taskItem.id;
 
       select.append(option);
     });
 
   select.onchange = () => {
-    currentTask.before =
-      select.value;
-
+    currentTask.before = select.value;
     save();
   };
 
@@ -1655,23 +1224,10 @@ function beforeField(currentTask) {
   return wrapper;
 }
 
-function checkField(
-  fieldLabel,
-  checked,
-  onChange,
-) {
-  const wrapper = el(
-    "label",
-    "check-field",
-  );
-
-  const text = span(
-    fieldLabel,
-    "label",
-  );
-
-  const input =
-    document.createElement("input");
+function checkField(fieldLabel, checked, onChange) {
+  const wrapper = el("label", "check-field");
+  const text = span(fieldLabel, "label");
+  const input = document.createElement("input");
 
   input.type = "checkbox";
   input.checked = checked;
@@ -1686,12 +1242,8 @@ function checkField(
   return wrapper;
 }
 
-function el(
-  tagName,
-  className = "",
-) {
-  const element =
-    document.createElement(tagName);
+function el(tagName, className = "") {
+  const element = document.createElement(tagName);
 
   if (className) {
     element.className = className;
@@ -1700,15 +1252,8 @@ function el(
   return element;
 }
 
-function span(
-  text,
-  className = "",
-) {
-  const element = el(
-    "span",
-    className,
-  );
-
+function span(text, className = "") {
+  const element = el("span", className);
   element.textContent = text;
 
   return element;
@@ -1718,15 +1263,8 @@ function label(text) {
   return span(text);
 }
 
-function button(
-  text,
-  className,
-  onClick,
-) {
-  const element = el(
-    "button",
-    className,
-  );
+function button(text, className, onClick) {
+  const element = el("button", className);
 
   element.type = "button";
   element.textContent = text;
@@ -1735,18 +1273,12 @@ function button(
   return element;
 }
 
-function moveTask(
-  taskId,
-  direction,
-) {
-  const currentIndex =
-    tasks.findIndex(
-      (taskItem) =>
-        taskItem.id === taskId,
-    );
+function moveTask(taskId, direction) {
+  const currentIndex = tasks.findIndex(
+    (taskItem) => taskItem.id === taskId
+  );
 
-  const newIndex =
-    currentIndex + direction;
+  const newIndex = currentIndex + direction;
 
   if (
     currentIndex < 0 ||
@@ -1756,61 +1288,39 @@ function moveTask(
     return;
   }
 
-  const [movedTask] =
-    tasks.splice(currentIndex, 1);
-
-  tasks.splice(
-    newIndex,
-    0,
-    movedTask,
-  );
+  const [movedTask] = tasks.splice(currentIndex, 1);
+  tasks.splice(newIndex, 0, movedTask);
 
   save();
   renderTasks();
 }
 
-function reorderTask(
-  sourceId,
-  targetId,
-  insertAfter,
-) {
-  if (
-    !sourceId ||
-    sourceId === targetId
-  ) {
+function reorderTask(sourceId, targetId, insertAfter) {
+  if (!sourceId || sourceId === targetId) {
     return;
   }
 
-  const sourceIndex =
-    tasks.findIndex(
-      (taskItem) =>
-        taskItem.id === sourceId,
-    );
+  const sourceIndex = tasks.findIndex(
+    (taskItem) => taskItem.id === sourceId
+  );
 
   if (
     sourceIndex < 0 ||
-    !tasks.some(
-      (taskItem) =>
-        taskItem.id === targetId,
-    )
+    !tasks.some((taskItem) => taskItem.id === targetId)
   ) {
     return;
   }
 
-  const [movedTask] =
-    tasks.splice(sourceIndex, 1);
+  const [movedTask] = tasks.splice(sourceIndex, 1);
 
-  const targetIndex =
-    tasks.findIndex(
-      (taskItem) =>
-        taskItem.id === targetId,
-    );
+  const targetIndex = tasks.findIndex(
+    (taskItem) => taskItem.id === targetId
+  );
 
   tasks.splice(
-    targetIndex +
-      (insertAfter ? 1 : 0),
+    targetIndex + (insertAfter ? 1 : 0),
     0,
-    movedTask,
+    movedTask
   );
 
   save();
@@ -1822,175 +1332,105 @@ function makeSchedule() {
 
   const {
     start: workStart,
-    end: workEnd,
+    end: workEnd
   } = scheduleBounds();
 
-  const activeMembers =
-    members.filter(
-      (currentMember) =>
-        currentMember.name.trim(),
-    );
+  const activeMembers = members.filter(
+    (currentMember) => currentMember.name.trim()
+  );
 
-  const activeTasks =
-    tasks.filter(
-      (currentTask) =>
-        currentTask.name.trim(),
-    );
+  const activeTasks = tasks.filter(
+    (currentTask) => currentTask.name.trim()
+  );
 
   if (
     workStart === null ||
     workEnd === null ||
     workEnd <= workStart
   ) {
-    toast(
-      "全体の開始・終了日時を確認してください",
-    );
-
+    toast("全体の開始・終了日時を確認してください");
     return;
   }
 
   if (!activeMembers.length) {
-    toast(
-      "メンバーを1人以上入力してください",
-    );
-
+    toast("メンバーを1人以上入力してください");
     return;
   }
 
   if (!activeTasks.length) {
-    toast(
-      "作業を1件以上入力してください",
-    );
-
+    toast("作業を1件以上入力してください");
     return;
   }
 
-  if (
-    (workEnd - workStart) % STEP
-  ) {
-    toast(
-      `全体の時刻は${stepLabel()}単位で設定してください`,
-    );
-
+  if ((workEnd - workStart) % STEP) {
+    toast(`全体の時刻は${stepLabel()}単位で設定してください`);
     return;
   }
 
-  /*
-   * 日単位では稼働時間・休憩の
-   * 検査を行いません。
-   */
   if (!isDayMode()) {
-    for (
-      const currentMember
-      of activeMembers
-    ) {
-      for (
-        const availability
-        of currentMember.availability
-      ) {
-        const availabilityStart =
-          toMin(availability.start);
-
-        const availabilityEnd =
-          toMin(availability.end);
+    for (const currentMember of activeMembers) {
+      for (const availability of currentMember.availability) {
+        const availabilityStart = toMin(availability.start);
+        const availabilityEnd = toMin(availability.end);
 
         if (
           availabilityStart === null ||
           availabilityEnd === null
         ) {
           toast(
-            `${currentMember.name}さんの稼働日時は「2026-09-03 07:00」の形式で入力してください`,
+            `${currentMember.name}さんの稼働日時は「2026-09-03 07:00」の形式で入力してください`
           );
-
           return;
         }
 
         if (
-          availabilityEnd <=
-            availabilityStart ||
-          availabilityStart <
-            workStart ||
-          availabilityEnd >
-            workEnd
+          availabilityEnd <= availabilityStart ||
+          availabilityStart < workStart ||
+          availabilityEnd > workEnd
         ) {
           toast(
-            `${currentMember.name}さんの稼働日時を全体時間内で確認してください`,
+            `${currentMember.name}さんの稼働日時を全体時間内で確認してください`
           );
-
           return;
         }
 
         if (
-          (availabilityStart -
-            workStart) %
-            STEP ||
-          (availabilityEnd -
-            workStart) %
-            STEP
+          (availabilityStart - workStart) % STEP ||
+          (availabilityEnd - workStart) % STEP
         ) {
           toast(
-            `${currentMember.name}さんの稼働時間を${stepLabel()}単位で設定してください`,
+            `${currentMember.name}さんの稼働時間を${stepLabel()}単位で設定してください`
           );
-
           return;
         }
       }
 
-      const availableSlots =
-        new Set();
+      const availableSlots = new Set();
 
-      currentMember.availability.forEach(
-        (availability) => {
-          const firstSlot =
-            (toMin(
-              availability.start,
-            ) -
-              workStart) /
-            STEP;
+      currentMember.availability.forEach((availability) => {
+        const firstSlot =
+          (toMin(availability.start) - workStart) / STEP;
 
-          const lastSlot =
-            (toMin(
-              availability.end,
-            ) -
-              workStart) /
-            STEP;
+        const lastSlot =
+          (toMin(availability.end) - workStart) / STEP;
 
-          for (
-            let slot = firstSlot;
-            slot < lastSlot;
-            slot++
-          ) {
-            availableSlots.add(slot);
-          }
-        },
-      );
+        for (let slot = firstSlot; slot < lastSlot; slot++) {
+          availableSlots.add(slot);
+        }
+      });
 
-      const fixedRestSlots =
-        new Set();
-
+      const fixedRestSlots = new Set();
       let flexibleRestMinutes = 0;
 
-      for (
-        const restRule
-        of currentMember.restRules
-      ) {
-        if (
-          restRule.type === "fixed"
-        ) {
-          const restStart =
-            toMin(restRule.start);
+      for (const restRule of currentMember.restRules) {
+        if (restRule.type === "fixed") {
+          const restStart = toMin(restRule.start);
+          const restEnd = toMin(restRule.end);
 
-          const restEnd =
-            toMin(restRule.end);
-
-          if (
-            restStart === null ||
-            restEnd === null
-          ) {
+          if (restStart === null || restEnd === null) {
             toast(
-              `${currentMember.name}さんの固定休憩は「2026-09-03 12:00」の形式で入力してください`,
+              `${currentMember.name}さんの固定休憩は「2026-09-03 12:00」の形式で入力してください`
             );
-
             return;
           }
 
@@ -2000,53 +1440,39 @@ function makeSchedule() {
             restEnd > workEnd
           ) {
             toast(
-              `${currentMember.name}さんの固定休憩を全体時間内で確認してください`,
+              `${currentMember.name}さんの固定休憩を全体時間内で確認してください`
             );
-
             return;
           }
 
           if (
-            (restStart - workStart) %
-              STEP ||
-            (restEnd - workStart) %
-              STEP
+            (restStart - workStart) % STEP ||
+            (restEnd - workStart) % STEP
           ) {
             toast(
-              `${currentMember.name}さんの固定休憩を${stepLabel()}単位で設定してください`,
+              `${currentMember.name}さんの固定休憩を${stepLabel()}単位で設定してください`
             );
-
             return;
           }
 
-          const restLastSlot =
-            (restEnd - workStart) /
-            STEP;
+          const restLastSlot = (restEnd - workStart) / STEP;
 
           for (
-            let slot =
-              (restStart -
-                workStart) /
-              STEP;
+            let slot = (restStart - workStart) / STEP;
             slot < restLastSlot;
             slot++
           ) {
-            if (
-              !availableSlots.has(slot)
-            ) {
+            if (!availableSlots.has(slot)) {
               toast(
-                `${currentMember.name}さんの固定休憩は稼働時間内に設定してください`,
+                `${currentMember.name}さんの固定休憩は稼働時間内に設定してください`
               );
-
               return;
             }
 
             fixedRestSlots.add(slot);
           }
         } else {
-          const minutes = Number(
-            restRule.minutes,
-          );
+          const minutes = Number(restRule.minutes);
 
           if (
             !Number.isFinite(minutes) ||
@@ -2054,100 +1480,67 @@ function makeSchedule() {
             minutes % STEP
           ) {
             toast(
-              `${currentMember.name}さんの休憩時間を${stepLabel()}単位で設定してください`,
+              `${currentMember.name}さんの休憩時間を${stepLabel()}単位で設定してください`
             );
-
             return;
           }
 
-          flexibleRestMinutes +=
-            minutes;
+          flexibleRestMinutes += minutes;
         }
       }
 
-      const cannotFitRest =
-        currentMember.availability.some(
-          (availability) => {
-            const firstSlot =
-              (toMin(
-                availability.start,
-              ) -
-                workStart) /
-              STEP;
+      const cannotFitRest = currentMember.availability.some(
+        (availability) => {
+          const firstSlot =
+            (toMin(availability.start) - workStart) / STEP;
 
-            const lastSlot =
-              (toMin(
-                availability.end,
-              ) -
-                workStart) /
-              STEP;
+          const lastSlot =
+            (toMin(availability.end) - workStart) / STEP;
 
-            let fixedRestCount = 0;
+          let fixedRestCount = 0;
 
-            for (
-              let slot = firstSlot;
-              slot < lastSlot;
-              slot++
-            ) {
-              if (
-                fixedRestSlots.has(slot)
-              ) {
-                fixedRestCount++;
-              }
+          for (let slot = firstSlot; slot < lastSlot; slot++) {
+            if (fixedRestSlots.has(slot)) {
+              fixedRestCount++;
             }
+          }
 
-            return (
-              flexibleRestMinutes /
-                STEP >
-              lastSlot -
-                firstSlot -
-                fixedRestCount
-            );
-          },
-        );
+          return (
+            flexibleRestMinutes / STEP >
+            lastSlot - firstSlot - fixedRestCount
+          );
+        }
+      );
 
       if (cannotFitRest) {
         toast(
-          `${currentMember.name}さんの各稼働時間内に、指定された休憩時間を確保できません`,
+          `${currentMember.name}さんの各稼働時間内に、指定された休憩時間を確保できません`
         );
-
         return;
       }
     }
   }
 
-  for (
-    const currentTask
-    of activeTasks
-  ) {
-    if (!currentTask.start) {
-      continue;
-    }
+  for (const currentTask of activeTasks) {
+    if (!currentTask.start) continue;
 
     const taskStart = toMin(
       isDayMode()
-        ? startOfDateValue(
-            currentTask.start,
-          )
-        : currentTask.start,
+        ? startOfDateValue(currentTask.start)
+        : currentTask.start
     );
 
     if (taskStart === null) {
       toast(
-        `${currentTask.name}の開始日時は「2026-09-03 09:00」の形式で入力してください`,
+        `${currentTask.name}の開始日時は「2026-09-03 09:00」の形式で入力してください`
       );
-
       return;
     }
 
-    if (
-      (taskStart - workStart) %
-      STEP
-    ) {
+    if ((taskStart - workStart) % STEP) {
       toast(
-        `${currentTask.name}の開始時刻は${stepLabel()}単位で設定してください`,
+        `${currentTask.name}の開始時刻は${stepLabel()}単位で設定してください`
       );
-
       return;
     }
   }
@@ -2157,15 +1550,15 @@ function makeSchedule() {
       activeTasks,
       activeMembers,
       workStart,
-      workEnd,
+      workEnd
     ),
     activeMembers,
-    workStart,
+    workStart
   );
 
   $("resultSection").scrollIntoView({
     behavior: "smooth",
-    block: "start",
+    block: "start"
   });
 }
 
@@ -2173,150 +1566,89 @@ function createSchedule(
   activeTasks,
   activeMembers,
   workStart,
-  workEnd,
+  workEnd
 ) {
-  const slotCount =
-    (workEnd - workStart) / STEP;
+  const slotCount = (workEnd - workStart) / STEP;
 
   const cells = Object.fromEntries(
-    activeMembers.map(
-      (currentMember) => [
-        currentMember.id,
-        Array.from(
-          { length: slotCount },
-          () => ({
-            type: "break",
-          }),
-        ),
-      ],
-    ),
+    activeMembers.map((currentMember) => [
+      currentMember.id,
+      Array.from(
+        { length: slotCount },
+        () => ({ type: "break" })
+      )
+    ])
   );
 
   const completed = {};
   const failed = [];
   const processing = new Set();
 
-  activeMembers.forEach(
-    (currentMember) => {
-      /*
-       * 日単位では、期間内のすべての日を
-       * 稼働可能として扱います。
-       */
-      if (isDayMode()) {
-        for (
-          let slot = 0;
-          slot < slotCount;
-          slot++
-        ) {
-          cells[currentMember.id][slot] =
-            null;
-        }
-
-        return;
+  activeMembers.forEach((currentMember) => {
+    if (isDayMode()) {
+      for (let slot = 0; slot < slotCount; slot++) {
+        cells[currentMember.id][slot] = null;
       }
+      return;
+    }
 
-      currentMember.availability.forEach(
-        (availability) => {
-          const firstSlot =
-            (toMin(
-              availability.start,
-            ) -
-              workStart) /
-            STEP;
+    currentMember.availability.forEach((availability) => {
+      const firstSlot =
+        (toMin(availability.start) - workStart) / STEP;
 
-          const lastSlot =
-            (toMin(
-              availability.end,
-            ) -
-              workStart) /
-            STEP;
+      const lastSlot =
+        (toMin(availability.end) - workStart) / STEP;
 
-          for (
-            let slot = firstSlot;
-            slot < lastSlot;
-            slot++
-          ) {
-            cells[currentMember.id][slot] =
-              null;
-          }
-        },
-      );
+      for (let slot = firstSlot; slot < lastSlot; slot++) {
+        cells[currentMember.id][slot] = null;
+      }
+    });
 
-      currentMember.restRules
-        .filter(
-          (restRule) =>
-            restRule.type === "fixed",
-        )
-        .forEach((restRule) => {
-          const firstSlot =
-            (toMin(restRule.start) -
-              workStart) /
-            STEP;
+    currentMember.restRules
+      .filter((restRule) => restRule.type === "fixed")
+      .forEach((restRule) => {
+        const firstSlot =
+          (toMin(restRule.start) - workStart) / STEP;
 
-          const lastSlot =
-            (toMin(restRule.end) -
-              workStart) /
-            STEP;
+        const lastSlot =
+          (toMin(restRule.end) - workStart) / STEP;
 
-          for (
-            let slot = firstSlot;
-            slot < lastSlot;
-            slot++
-          ) {
-            cells[currentMember.id][slot] = {
-              type: "break",
-              breakKind: "fixed",
-            };
-          }
-        });
-    },
+        for (let slot = firstSlot; slot < lastSlot; slot++) {
+          cells[currentMember.id][slot] = {
+            type: "break",
+            breakKind: "fixed"
+          };
+        }
+      });
+  });
+
+  const taskMap = Object.fromEntries(
+    activeTasks.map((currentTask) => [
+      currentTask.id,
+      currentTask
+    ])
   );
 
-  const taskMap =
-    Object.fromEntries(
-      activeTasks.map(
-        (currentTask) => [
-          currentTask.id,
-          currentTask,
-        ],
-      ),
+  function addFailure(currentTask, reason) {
+    const alreadyFailed = failed.some(
+      (failedItem) => failedItem.task.id === currentTask.id
     );
-
-  function addFailure(
-    currentTask,
-    reason,
-  ) {
-    const alreadyFailed =
-      failed.some(
-        (failedItem) =>
-          failedItem.task.id ===
-          currentTask.id,
-      );
 
     if (!alreadyFailed) {
       failed.push({
         task: currentTask,
-        reason,
+        reason
       });
     }
   }
 
-  function placeTask(
-    currentTask,
-    latestSlot = slotCount,
-  ) {
+  function placeTask(currentTask, latestSlot = slotCount) {
     if (completed[currentTask.id]) {
       return completed[currentTask.id];
     }
 
-    if (
-      processing.has(currentTask.id)
-    ) {
-      addFailure(
-        currentTask,
-        "前工程が循環しています",
-      );
-
+    if (processing.has(currentTask.id)) {
+      addFailure(currentTask, "前工程が循環しています");
       return null;
     }
 
@@ -2325,112 +1657,69 @@ function createSchedule(
     let earliestSlot = 0;
 
     if (currentTask.before) {
-      const previousTask =
-        taskMap[currentTask.before];
+      const previousTask = taskMap[currentTask.before];
 
       if (!previousTask) {
-        addFailure(
-          currentTask,
-          "前工程が見つかりません",
-        );
-
-        processing.delete(
-          currentTask.id,
-        );
-
+        addFailure(currentTask, "前工程が見つかりません");
+        processing.delete(currentTask.id);
         return null;
       }
 
-      const previousResult =
-        placeTask(
-          previousTask,
-          currentTask.start
-            ? (
-                toMin(
-                  isDayMode()
-                    ? startOfDateValue(
-                        currentTask.start,
-                      )
-                    : currentTask.start,
-                ) -
-                workStart
-              ) / STEP
-            : latestSlot,
-        );
+      const previousResult = placeTask(
+        previousTask,
+        currentTask.start
+          ? (
+              toMin(
+                isDayMode()
+                  ? startOfDateValue(currentTask.start)
+                  : currentTask.start
+              ) - workStart
+            ) / STEP
+          : latestSlot
+      );
 
       if (!previousResult) {
-        addFailure(
-          currentTask,
-          "前工程を配置できません",
-        );
-
-        processing.delete(
-          currentTask.id,
-        );
-
+        addFailure(currentTask, "前工程を配置できません");
+        processing.delete(currentTask.id);
         return null;
       }
 
-      earliestSlot =
-        previousResult.end;
+      earliestSlot = previousResult.end;
     }
 
-    const missingSkills =
-      skills(currentTask.skill).filter(
-        (requiredSkill) =>
-          !activeMembers.some(
-            (currentMember) =>
-              skills(
-                currentMember.skills,
-              ).includes(
-                requiredSkill,
-              ),
-          ),
-      );
+    const missingSkills = skills(currentTask.skill).filter(
+      (requiredSkill) =>
+        !activeMembers.some(
+          (currentMember) =>
+            skills(currentMember.skills).includes(requiredSkill)
+        )
+    );
 
     if (missingSkills.length) {
       addFailure(
         currentTask,
-        `専門「${missingSkills.join("、")}」を持つメンバーがいません`,
+        `専門「${missingSkills.join("、")}」を持つメンバーがいません`
       );
-
-      processing.delete(
-        currentTask.id,
-      );
-
+      processing.delete(currentTask.id);
       return null;
     }
 
-    const fixedStart =
-      currentTask.start
-        ? (
-            toMin(
-              isDayMode()
-                ? startOfDateValue(
-                    currentTask.start,
-                  )
-                : currentTask.start,
-            ) -
-            workStart
-          ) / STEP
-        : null;
+    const fixedStart = currentTask.start
+      ? (
+          toMin(
+            isDayMode()
+              ? startOfDateValue(currentTask.start)
+              : currentTask.start
+          ) - workStart
+        ) / STEP
+      : null;
 
     if (
       fixedStart !== null &&
-      (
-        fixedStart < 0 ||
-        fixedStart >= slotCount
-      )
+      (fixedStart < 0 || fixedStart >= slotCount)
     ) {
-      addFailure(
-        currentTask,
-        "開始日時が全体の時間外です",
-      );
-
-      processing.delete(
-        currentTask.id,
-      );
-
+      addFailure(currentTask, "開始日時が全体の時間外です");
+      processing.delete(currentTask.id);
       return null;
     }
 
@@ -2440,66 +1729,51 @@ function createSchedule(
     ) {
       addFailure(
         currentTask,
-        "開始日時が前工程の完了より前です",
+        "開始日時が前工程の完了より前です"
       );
-
-      processing.delete(
-        currentTask.id,
-      );
-
+      processing.delete(currentTask.id);
       return null;
     }
 
-    const plan =
-      currentTask.shareable
-        ? planShareable(
-            currentTask,
-            activeMembers,
-            cells,
-            fixedStart ??
-              earliestSlot,
-            latestSlot,
-            fixedStart !== null,
-          )
-        : planTogether(
-            currentTask,
-            activeMembers,
-            cells,
-            fixedStart ??
-              earliestSlot,
-            latestSlot,
-            fixedStart !== null,
-          );
+    const plan = currentTask.shareable
+      ? planShareable(
+          currentTask,
+          activeMembers,
+          cells,
+          fixedStart ?? earliestSlot,
+          latestSlot,
+          fixedStart !== null
+        )
+      : planTogether(
+          currentTask,
+          activeMembers,
+          cells,
+          fixedStart ?? earliestSlot,
+          latestSlot,
+          fixedStart !== null
+        );
 
     if (!plan) {
       addFailure(
         currentTask,
-        "必要な人数、専門性、または時間枠を確保できません",
+        "必要な人数、専門性、または時間枠を確保できません"
       );
-
-      processing.delete(
-        currentTask.id,
-      );
-
+      processing.delete(currentTask.id);
       return null;
     }
 
     plan.parts.forEach((part) => {
-      for (
-        let slot = part.start;
-        slot < part.end;
-        slot++
-      ) {
+      for (let slot = part.start; slot < part.end; slot++) {
         cells[part.memberId][slot] = {
           type: "task",
-          task: currentTask,
+          task: currentTask
         };
       }
     });
 
     completed[currentTask.id] = {
       ...plan,
-      task: currentTask,
+      task: currentTask
     };
 
     processing.delete(currentTask.id);
@@ -2508,24 +1782,17 @@ function createSchedule(
   }
 
   activeTasks
-    .filter(
-      (currentTask) =>
-        currentTask.start,
-    )
+    .filter((currentTask) => currentTask.start)
     .sort(
       (firstTask, secondTask) =>
-        toMin(firstTask.start) -
-        toMin(secondTask.start),
+        toMin(firstTask.start) - toMin(secondTask.start)
     )
     .forEach((currentTask) => {
       placeTask(currentTask);
     });
 
   activeTasks
-    .filter(
-      (currentTask) =>
-        !currentTask.start,
-    )
+    .filter((currentTask) => !currentTask.start)
     .forEach((currentTask) => {
       placeTask(currentTask);
     });
@@ -2538,7 +1805,7 @@ function createSchedule(
       activeTasks,
       activeMembers,
       slotCount,
-      workStart,
+      workStart
     );
   }
 
@@ -2546,9 +1813,10 @@ function createSchedule(
     cells,
     done: Object.values(completed),
     failed,
-    slotCount,
+    slotCount
   };
 }
+
 function allocateFlexibleBreaks(
   cells,
   completed,
@@ -2556,65 +1824,42 @@ function allocateFlexibleBreaks(
   activeTasks,
   activeMembers,
   slotCount,
-  workStart,
+  workStart
 ) {
-  const requiredBreakSlots =
-    Object.fromEntries(
-      activeMembers.map(
-        (currentMember) => [
-          currentMember.id,
-          currentMember.restRules
-            .filter(
-              (restRule) =>
-                restRule.type !==
-                "fixed",
-            )
-            .reduce(
-              (total, restRule) =>
-                total +
-                Math.ceil(
-                  Number(
-                    restRule.minutes,
-                  ) / STEP,
-                ),
-              0,
-            ),
-        ],
-      ),
-    );
+  const requiredBreakSlots = Object.fromEntries(
+    activeMembers.map((currentMember) => [
+      currentMember.id,
+      currentMember.restRules
+        .filter((restRule) => restRule.type !== "fixed")
+        .reduce(
+          (total, restRule) =>
+            total + Math.ceil(Number(restRule.minutes) / STEP),
+          0
+        )
+    ])
+  );
 
-  const taskPriority =
-    Object.fromEntries(
-      activeTasks.map(
-        (currentTask, index) => [
-          currentTask.id,
-          index,
-        ],
-      ),
-    );
+  const taskPriority = Object.fromEntries(
+    activeTasks.map((currentTask, index) => [
+      currentTask.id,
+      index
+    ])
+  );
 
   const clearFlexibleBreaks = () => {
-    activeMembers.forEach(
-      (currentMember) => {
-        for (
-          let slot = 0;
-          slot < slotCount;
-          slot++
-        ) {
-          const cell =
-            cells[currentMember.id][slot];
+    activeMembers.forEach((currentMember) => {
+      for (let slot = 0; slot < slotCount; slot++) {
+        const cell = cells[currentMember.id][slot];
 
-          if (
-            cell &&
-            cell.type === "break" &&
-            cell.breakKind === "flexible"
-          ) {
-            cells[currentMember.id][slot] =
-              null;
-          }
+        if (
+          cell &&
+          cell.type === "break" &&
+          cell.breakKind === "flexible"
+        ) {
+          cells[currentMember.id][slot] = null;
         }
-      },
-    );
+      }
+    });
   };
 
   for (
@@ -2626,187 +1871,119 @@ function allocateFlexibleBreaks(
 
     const membersWithoutBreaks = [];
 
-    activeMembers.forEach(
-      (currentMember) => {
-        currentMember.availability.forEach(
-          (availability) => {
-            let remaining =
-              requiredBreakSlots[
-                currentMember.id
-              ];
+    activeMembers.forEach((currentMember) => {
+      currentMember.availability.forEach((availability) => {
+        let remaining = requiredBreakSlots[currentMember.id];
 
-            const firstSlot =
-              (toMin(
-                availability.start,
-              ) -
-                workStart) /
-              STEP;
+        const firstSlot =
+          (toMin(availability.start) - workStart) / STEP;
 
-            const lastSlot =
-              (toMin(
-                availability.end,
-              ) -
-                workStart) /
-              STEP;
+        const lastSlot =
+          (toMin(availability.end) - workStart) / STEP;
 
-            for (
-              let slot = firstSlot;
-              slot < lastSlot &&
-              remaining > 0;
-              slot++
-            ) {
-              if (
-                cells[currentMember.id][
-                  slot
-                ] === null
-              ) {
-                cells[currentMember.id][
-                  slot
-                ] = {
-                  type: "break",
-                  breakKind: "flexible",
-                };
+        for (
+          let slot = firstSlot;
+          slot < lastSlot && remaining > 0;
+          slot++
+        ) {
+          if (cells[currentMember.id][slot] === null) {
+            cells[currentMember.id][slot] = {
+              type: "break",
+              breakKind: "flexible"
+            };
 
-                remaining--;
-              }
-            }
+            remaining--;
+          }
+        }
 
-            if (
-              remaining > 0 &&
-              !membersWithoutBreaks.includes(
-                currentMember.id,
-              )
-            ) {
-              membersWithoutBreaks.push(
-                currentMember.id,
-              );
-            }
-          },
-        );
-      },
-    );
+        if (
+          remaining > 0 &&
+          !membersWithoutBreaks.includes(currentMember.id)
+        ) {
+          membersWithoutBreaks.push(currentMember.id);
+        }
+      });
+    });
 
     if (!membersWithoutBreaks.length) {
       return;
     }
 
-    const affectedMemberIds =
-      new Set(
-        membersWithoutBreaks,
-      );
+    const affectedMemberIds = new Set(membersWithoutBreaks);
 
-    const taskToRemove =
-      Object.values(completed)
-        .filter((result) =>
-          result.parts.some((part) =>
-            affectedMemberIds.has(
-              part.memberId,
-            ),
-          ),
+    const taskToRemove = Object.values(completed)
+      .filter((result) =>
+        result.parts.some((part) =>
+          affectedMemberIds.has(part.memberId)
         )
-        .sort(
-          (firstResult, secondResult) =>
-            (
-              taskPriority[
-                secondResult.task.id
-              ] ?? -1
-            ) -
-            (
-              taskPriority[
-                firstResult.task.id
-              ] ?? -1
-            ),
-        )[0];
+      )
+      .sort(
+        (firstResult, secondResult) =>
+          (taskPriority[secondResult.task.id] ?? -1) -
+          (taskPriority[firstResult.task.id] ?? -1)
+      )[0];
 
     if (!taskToRemove) {
       return;
     }
 
-    const removedTaskIds =
-      new Set([
-        taskToRemove.task.id,
-      ]);
+    const removedTaskIds = new Set([
+      taskToRemove.task.id
+    ]);
 
     let changed = true;
 
     while (changed) {
       changed = false;
 
-      activeTasks.forEach(
-        (currentTask) => {
-          if (
-            currentTask.before &&
-            removedTaskIds.has(
-              currentTask.before,
-            ) &&
-            completed[currentTask.id] &&
-            !removedTaskIds.has(
-              currentTask.id,
-            )
-          ) {
-            removedTaskIds.add(
-              currentTask.id,
-            );
-
-            changed = true;
-          }
-        },
-      );
+      activeTasks.forEach((currentTask) => {
+        if (
+          currentTask.before &&
+          removedTaskIds.has(currentTask.before) &&
+          completed[currentTask.id] &&
+          !removedTaskIds.has(currentTask.id)
+        ) {
+          removedTaskIds.add(currentTask.id);
+          changed = true;
+        }
+      });
     }
 
-    activeMembers.forEach(
-      (currentMember) => {
-        for (
-          let slot = 0;
-          slot < slotCount;
-          slot++
+    activeMembers.forEach((currentMember) => {
+      for (let slot = 0; slot < slotCount; slot++) {
+        const cell = cells[currentMember.id][slot];
+
+        if (
+          cell &&
+          cell.type === "task" &&
+          removedTaskIds.has(cell.task.id)
         ) {
-          const cell =
-            cells[currentMember.id][slot];
-
-          if (
-            cell &&
-            cell.type === "task" &&
-            removedTaskIds.has(
-              cell.task.id,
-            )
-          ) {
-            cells[currentMember.id][slot] =
-              null;
-          }
+          cells[currentMember.id][slot] = null;
         }
-      },
-    );
+      }
+    });
 
-    removedTaskIds.forEach(
-      (taskId) => {
-        const removedResult =
-          completed[taskId];
+    removedTaskIds.forEach((taskId) => {
+      const removedResult = completed[taskId];
 
-        if (!removedResult) {
-          return;
-        }
+      if (!removedResult) return;
 
-        delete completed[taskId];
+      delete completed[taskId];
 
-        const alreadyFailed =
-          failed.some(
-            (failedItem) =>
-              failedItem.task.id === taskId,
-          );
+      const alreadyFailed = failed.some(
+        (failedItem) => failedItem.task.id === taskId
+      );
 
-        if (!alreadyFailed) {
-          failed.push({
-            task: removedResult.task,
-            reason:
-              taskId ===
-              taskToRemove.task.id
-                ? "休憩時間を確保するため、優先順位に基づいて配置から外しました"
-                : "前工程が休憩時間の確保により配置から外れました",
-          });
-        }
-      },
-    );
+      if (!alreadyFailed) {
+        failed.push({
+          task: removedResult.task,
+          reason:
+            taskId === taskToRemove.task.id
+              ? "休憩時間を確保するため、優先順位に基づいて配置から外しました"
+              : "前工程が休憩時間の確保により配置から外れました"
+        });
+      }
+    });
   }
 }
 
@@ -2816,72 +1993,51 @@ function planTogether(
   cells,
   startSlot,
   latestSlot,
-  fixedStart,
+  fixedStart
 ) {
   const requiredPeople = Math.max(
     1,
-    Number(currentTask.people),
+    Number(currentTask.people)
   );
 
   const requiredSlots = Math.ceil(
-    Number(currentTask.minutes) / STEP,
+    Number(currentTask.minutes) / STEP
   );
 
-  if (
-    activeMembers.length <
-    requiredPeople
-  ) {
+  if (activeMembers.length < requiredPeople) {
     return null;
   }
 
   const memberGroups = combinations(
     activeMembers,
-    requiredPeople,
+    requiredPeople
   ).filter((group) =>
-    coversSkills(
-      group,
-      currentTask.skill,
-    ),
+    coversSkills(group, currentTask.skill)
   );
 
-  for (
-    const group
-    of memberGroups
-  ) {
+  for (const group of memberGroups) {
     const possibleStarts = fixedStart
       ? [startSlot]
       : Array.from(
           {
-            length: Math.max(
-              0,
-              latestSlot - startSlot,
-            ),
+            length: Math.max(0, latestSlot - startSlot)
           },
-          (_, index) =>
-            startSlot + index,
+          (_, index) => startSlot + index
         );
 
-    for (
-      const possibleStart
-      of possibleStarts
-    ) {
+    for (const possibleStart of possibleStarts) {
       let selectedSlots = [];
 
       if (currentTask.interruptible) {
         for (
           let slot = possibleStart;
           slot < latestSlot &&
-          selectedSlots.length <
-            requiredSlots;
+          selectedSlots.length < requiredSlots;
           slot++
         ) {
-          const allAvailable =
-            group.every(
-              (currentMember) =>
-                !cells[
-                  currentMember.id
-                ][slot],
-            );
+          const allAvailable = group.every(
+            (currentMember) => !cells[currentMember.id][slot]
+          );
 
           if (allAvailable) {
             selectedSlots.push(slot);
@@ -2889,65 +2045,46 @@ function planTogether(
         }
       } else {
         selectedSlots = Array.from(
-          {
-            length: requiredSlots,
-          },
-          (_, index) =>
-            possibleStart + index,
+          { length: requiredSlots },
+          (_, index) => possibleStart + index
         );
 
         const outsidePeriod =
-          selectedSlots.at(-1) >=
-          latestSlot;
+          selectedSlots.at(-1) >= latestSlot;
 
-        const hasConflict =
-          selectedSlots.some((slot) =>
-            group.some(
-              (currentMember) =>
-                cells[
-                  currentMember.id
-                ][slot],
-            ),
-          );
+        const hasConflict = selectedSlots.some((slot) =>
+          group.some(
+            (currentMember) => cells[currentMember.id][slot]
+          )
+        );
 
-        if (
-          outsidePeriod ||
-          hasConflict
-        ) {
+        if (outsidePeriod || hasConflict) {
           continue;
         }
       }
 
       if (
-        selectedSlots.length <
-          requiredSlots ||
-        selectedSlots[0] !==
-          possibleStart
+        selectedSlots.length < requiredSlots ||
+        selectedSlots[0] !== possibleStart
       ) {
         continue;
       }
 
       const parts = [];
 
-      group.forEach(
-        (currentMember) => {
-          ranges(selectedSlots).forEach(
-            (range) => {
-              parts.push({
-                memberId:
-                  currentMember.id,
-                ...range,
-              });
-            },
-          );
-        },
-      );
+      group.forEach((currentMember) => {
+        ranges(selectedSlots).forEach((range) => {
+          parts.push({
+            memberId: currentMember.id,
+            ...range
+          });
+        });
+      });
 
       return {
         parts,
         start: possibleStart,
-        end:
-          selectedSlots.at(-1) + 1,
+        end: selectedSlots.at(-1) + 1
       };
     }
   }
@@ -2961,75 +2098,51 @@ function planShareable(
   cells,
   startSlot,
   latestSlot,
-  fixedStart,
+  fixedStart
 ) {
   const requiredPeople = Math.max(
     1,
-    Number(currentTask.people),
+    Number(currentTask.people)
   );
 
-  const requiredWork = Math.ceil(
-    Number(currentTask.minutes) / STEP,
-  ) * requiredPeople;
+  const requiredWork =
+    Math.ceil(Number(currentTask.minutes) / STEP) *
+    requiredPeople;
 
   const possibleStarts = fixedStart
     ? [startSlot]
     : Array.from(
         {
-          length: Math.max(
-            0,
-            latestSlot - startSlot,
-          ),
+          length: Math.max(0, latestSlot - startSlot)
         },
-        (_, index) =>
-          startSlot + index,
+        (_, index) => startSlot + index
       );
 
-  if (
-    activeMembers.length <
-    requiredPeople
-  ) {
+  if (activeMembers.length < requiredPeople) {
     return null;
   }
 
-  for (
-    const possibleStart
-    of possibleStarts
-  ) {
-    let remainingWork =
-      requiredWork;
-
+  for (const possibleStart of possibleStarts) {
+    let remainingWork = requiredWork;
     const memberSlots = {};
 
     let started = false;
     let interruptionFound = false;
-
-    let lastSlot =
-      possibleStart - 1;
-
+    let lastSlot = possibleStart - 1;
     let actualStart = null;
 
     for (
       let slot = possibleStart;
-      slot < latestSlot &&
-      remainingWork > 0;
+      slot < latestSlot && remainingWork > 0;
       slot++
     ) {
-      const availableMembers =
-        activeMembers.filter(
-          (currentMember) =>
-            !cells[
-              currentMember.id
-            ][slot],
-        );
+      const availableMembers = activeMembers.filter(
+        (currentMember) => !cells[currentMember.id][slot]
+      );
 
       if (
-        availableMembers.length >=
-          requiredPeople &&
-        coversSkills(
-          availableMembers,
-          currentTask.skill,
-        )
+        availableMembers.length >= requiredPeople &&
+        coversSkills(availableMembers, currentTask.skill)
       ) {
         if (
           slot === possibleStart ||
@@ -3047,24 +2160,17 @@ function planShareable(
             actualStart = slot;
           }
 
-          const selectedMembers =
-            chooseWorkers(
-              availableMembers,
-              Math.min(
-                availableMembers.length,
-                Math.max(
-                  requiredPeople,
-                  remainingWork,
-                ),
-              ),
-              currentTask.skill,
-            );
+          const selectedMembers = chooseWorkers(
+            availableMembers,
+            Math.min(
+              availableMembers.length,
+              Math.max(requiredPeople, remainingWork)
+            ),
+            currentTask.skill
+          );
 
           if (!selectedMembers) {
-            if (
-              fixedStart &&
-              slot === possibleStart
-            ) {
+            if (fixedStart && slot === possibleStart) {
               break;
             }
 
@@ -3073,34 +2179,19 @@ function planShareable(
 
           started = true;
 
-          selectedMembers.forEach(
-            (currentMember) => {
-              if (
-                !memberSlots[
-                  currentMember.id
-                ]
-              ) {
-                memberSlots[
-                  currentMember.id
-                ] = [];
-              }
+          selectedMembers.forEach((currentMember) => {
+            if (!memberSlots[currentMember.id]) {
+              memberSlots[currentMember.id] = [];
+            }
 
-              memberSlots[
-                currentMember.id
-              ].push(slot);
-            },
-          );
+            memberSlots[currentMember.id].push(slot);
+          });
 
-          remainingWork -=
-            selectedMembers.length;
-
+          remainingWork -= selectedMembers.length;
           lastSlot = slot;
         }
       } else {
-        if (
-          slot === possibleStart &&
-          fixedStart
-        ) {
+        if (slot === possibleStart && fixedStart) {
           break;
         }
 
@@ -3108,40 +2199,28 @@ function planShareable(
           interruptionFound = true;
         }
 
-        if (
-          !currentTask.interruptible &&
-          started
-        ) {
+        if (!currentTask.interruptible && started) {
           break;
         }
       }
     }
 
-    if (
-      remainingWork <= 0 &&
-      started
-    ) {
+    if (remainingWork <= 0 && started) {
       const parts = [];
 
-      Object.entries(
-        memberSlots,
-      ).forEach(
-        ([memberId, slots]) => {
-          ranges(slots).forEach(
-            (range) => {
-              parts.push({
-                memberId,
-                ...range,
-              });
-            },
-          );
-        },
-      );
+      Object.entries(memberSlots).forEach(([memberId, slots]) => {
+        ranges(slots).forEach((range) => {
+          parts.push({
+            memberId,
+            ...range
+          });
+        });
+      });
 
       return {
         parts,
         start: actualStart,
-        end: lastSlot + 1,
+        end: lastSlot + 1
       };
     }
   }
@@ -3152,35 +2231,23 @@ function planShareable(
 function ranges(slots) {
   const result = [];
 
-  if (!slots.length) {
-    return result;
-  }
+  if (!slots.length) return result;
 
   let start = slots[0];
   let end = start + 1;
 
-  for (
-    let index = 1;
-    index < slots.length;
-    index++
-  ) {
+  for (let index = 1; index < slots.length; index++) {
     if (slots[index] === end) {
       end++;
     } else {
-      result.push({
-        start,
-        end,
-      });
+      result.push({ start, end });
 
       start = slots[index];
       end = start + 1;
     }
   }
 
-  result.push({
-    start,
-    end,
-  });
+  result.push({ start, end });
 
   return result;
 }
@@ -3188,38 +2255,21 @@ function ranges(slots) {
 function combinations(items, count) {
   const result = [];
 
-  function build(
-    startIndex,
-    selectedItems,
-  ) {
-    if (
-      selectedItems.length === count
-    ) {
-      result.push([
-        ...selectedItems,
-      ]);
-
+  function build(startIndex, selectedItems) {
+    if (selectedItems.length === count) {
+      result.push([...selectedItems]);
       return;
     }
 
-    const remaining =
-      count - selectedItems.length;
+    const remaining = count - selectedItems.length;
 
     for (
       let index = startIndex;
-      index <=
-      items.length - remaining;
+      index <= items.length - remaining;
       index++
     ) {
-      selectedItems.push(
-        items[index],
-      );
-
-      build(
-        index + 1,
-        selectedItems,
-      );
-
+      selectedItems.push(items[index]);
+      build(index + 1, selectedItems);
       selectedItems.pop();
     }
   }
@@ -3236,60 +2286,39 @@ function skills(value) {
     .filter(Boolean);
 }
 
-function coversSkills(
-  selectedMembers,
-  requiredSkills,
-) {
-  return skills(
-    requiredSkills,
-  ).every((requiredSkill) =>
-    selectedMembers.some(
-      (currentMember) =>
-        skills(
-          currentMember.skills,
-        ).includes(requiredSkill),
-    ),
+function coversSkills(selectedMembers, requiredSkills) {
+  return skills(requiredSkills).every((requiredSkill) =>
+    selectedMembers.some((currentMember) =>
+      skills(currentMember.skills).includes(requiredSkill)
+    )
   );
 }
 
 function chooseWorkers(
   availableMembers,
   requestedCount,
-  requiredSkills,
+  requiredSkills
 ) {
   for (
-    let count = Math.max(
-      1,
-      requestedCount,
-    );
-    count <=
-    availableMembers.length;
+    let count = Math.max(1, requestedCount);
+    count <= availableMembers.length;
     count++
   ) {
-    const selected =
-      combinations(
-        availableMembers,
-        count,
-      ).find((group) =>
-        coversSkills(
-          group,
-          requiredSkills,
-        ),
-      );
+    const selected = combinations(
+      availableMembers,
+      count
+    ).find((group) =>
+      coversSkills(group, requiredSkills)
+    );
 
-    if (selected) {
-      return selected;
-    }
+    if (selected) return selected;
   }
 
   return null;
 }
 
-function draw(
-  scheduleData,
-  activeMembers,
-  workStart,
-) {
+/* 工程表の描画 */
+function draw(scheduleData, activeMembers, workStart) {
   resultArea.innerHTML = "";
 
   resultMessage.textContent =
@@ -3297,243 +2326,243 @@ function draw(
 
   const completedTasks = [
     ...new Map(
-      scheduleData.done.map(
-        (result) => [
-          result.task.id,
-          result.task,
-        ],
-      ),
-    ).values(),
+      scheduleData.done.map((result) => [
+        result.task.id,
+        result.task
+      ])
+    ).values()
   ];
 
   if (completedTasks.length) {
-    const legend = el(
-      "div",
-      "legend",
-    );
+    const legend = el("div", "legend");
 
-    completedTasks.forEach(
-      (currentTask) => {
-        const item = el(
-          "div",
-          "legend-item",
-        );
+    completedTasks.forEach((currentTask) => {
+      const item = el("div", "legend-item");
+      const swatch = el("span", "swatch");
 
-        const swatch = el(
-          "span",
-          "swatch",
-        );
+      swatch.style.background = currentTask.color;
 
-        swatch.style.background =
-          currentTask.color;
+      item.append(
+        swatch,
+        document.createTextNode(currentTask.name)
+      );
 
-        item.append(
-          swatch,
-          document.createTextNode(
-            currentTask.name,
-          ),
-        );
-
-        legend.append(item);
-      },
-    );
+      legend.append(item);
+    });
 
     resultArea.append(legend);
   }
 
-  const schedule = el(
-    "div",
-    "schedule",
-  );
+  const schedule = el("div", "schedule");
 
-  schedule.style.setProperty(
-    "--slots",
-    scheduleData.slotCount,
-  );
+  // 全員に作業・休憩がない連続区間を1列にまとめる
+  const columns = [];
+  const slotToColumn = [];
 
-  const timelineHeader = el(
-    "div",
-    "timeline-row",
-  );
+  for (let slot = 0; slot < scheduleData.slotCount;) {
+    const occupied = (index) =>
+      activeMembers.some((currentMember) => {
+        const cell = scheduleData.cells[currentMember.id][index];
 
-  const nameHeader = el(
-    "div",
-    "name-cell",
-  );
-
-  nameHeader.textContent =
-    "作業者名";
-
-  timelineHeader.append(nameHeader);
-
-  const headerSpan =
-    isDayMode() ? 1 : 4;
-
-  for (
-    let slot = 0;
-    slot < scheduleData.slotCount;
-    slot += headerSpan
-  ) {
-    const timeCell = el(
-      "div",
-      "time-cell hour-line",
-    );
-
-    const spanLength = Math.min(
-      headerSpan,
-      scheduleData.slotCount - slot,
-    );
-
-    timeCell.style.gridColumn =
-      `${slot + 2} / span ${spanLength}`;
-
-    timeCell.textContent = clock(
-      workStart + slot * STEP,
-    );
-
-    timelineHeader.append(timeCell);
-  }
-
-  schedule.append(timelineHeader);
-
-  activeMembers.forEach(
-    (currentMember) => {
-      const row = el(
-        "div",
-        "timeline-row",
-      );
-
-      const nameCell = el(
-        "div",
-        "name-cell",
-      );
-
-      nameCell.textContent =
-        currentMember.name;
-
-      row.append(nameCell);
-
-      for (
-        let slot = 0;
-        slot <
-        scheduleData.slotCount;
-        slot++
-      ) {
-        let lineClass = "";
-
-        if (isDayMode()) {
-          lineClass = "hour-line";
-        } else if (slot % 4 === 0) {
-          lineClass = "hour-line";
-        } else if (slot % 2 === 0) {
-          lineClass = "half-line";
-        }
-
-        const gridCell = el(
-          "div",
-          "grid-cell " + lineClass,
+        return (
+          cell &&
+          (cell.type !== "break" || cell.breakKind)
         );
+      });
 
-        gridCell.style.gridColumn =
-          slot + 2;
+    if (occupied(slot)) {
+      slotToColumn[slot] = columns.length;
 
-        row.append(gridCell);
-      }
+      columns.push({
+        start: slot,
+        end: slot + 1,
+        gap: false
+      });
 
-      let slot = 0;
+      slot++;
+    } else {
+      let end = slot + 1;
 
       while (
-        slot <
-        scheduleData.slotCount
+        end < scheduleData.slotCount &&
+        !occupied(end)
       ) {
-        const cell =
-          scheduleData.cells[
-            currentMember.id
-          ][slot];
+        end++;
+      }
 
-        if (!cell) {
-          slot++;
+      columns.push({
+        start: slot,
+        end,
+        gap: true
+      });
 
-          continue;
-        }
+      slot = end;
+    }
+  }
 
-        let endSlot = slot + 1;
+  schedule.style.setProperty("--slots", columns.length);
 
-        while (
-          endSlot <
-            scheduleData.slotCount &&
-          sameCell(
-            cell,
-            scheduleData.cells[
-              currentMember.id
-            ][endSlot],
-          )
-        ) {
-          endSlot++;
-        }
+  const unitWidth = Number($("axisZoom").value) || 24;
 
-        const bar = el(
-          "div",
-          cell.type === "break"
-            ? "break-bar"
-            : "bar",
-        );
+  const tracks = columns
+    .map((column) =>
+      column.gap ? "28px" : `${unitWidth}px`
+    )
+    .join(" ");
 
-        bar.style.gridColumn =
-          `${slot + 2} / ${endSlot + 2}`;
+  schedule.style.setProperty("--axis-tracks", tracks);
+
+  schedule.style.setProperty(
+    "--print-tracks",
+    columns
+      .map((column) =>
+        column.gap ? "14px" : "minmax(0, 1fr)"
+      )
+      .join(" ")
+  );
+
+  const header = el("div", "timeline-row");
+  const nameHeader = el("div", "name-cell");
+
+  nameHeader.textContent = "作業者名";
+  header.append(nameHeader);
+
+  columns.forEach((column, index) => {
+    const timeCell = el(
+      "div",
+      column.gap
+        ? "time-cell gap-cell"
+        : "time-cell hour-line"
+    );
+
+    timeCell.style.gridColumn = index + 2;
+
+    if (column.gap) {
+      timeCell.title =
+        `省略：${clock(workStart + column.start * STEP)}` +
+        ` ～ ${clock(workStart + column.end * STEP)}`;
+
+      timeCell.setAttribute("aria-label", timeCell.title);
+    } else if (
+      index === 0 ||
+      columns[index - 1].gap ||
+      isDayMode() ||
+      column.start % 4 === 0
+    ) {
+      timeCell.textContent =
+        clock(workStart + column.start * STEP);
+    }
+
+    header.append(timeCell);
+  });
+
+  schedule.append(header);
+
+  activeMembers.forEach((currentMember) => {
+    const row = el("div", "timeline-row");
+    const name = el("div", "name-cell");
+
+    name.textContent = currentMember.name;
+    row.append(name);
+
+    columns.forEach((column, index) => {
+      const grid = el(
+        "div",
+        column.gap
+          ? "grid-cell gap-cell"
+          : "grid-cell " +
+            (column.start % 4 === 0 ? "hour-line" : "")
+      );
+
+      grid.style.gridColumn = index + 2;
+      row.append(grid);
+    });
+
+    for (let slot = 0; slot < scheduleData.slotCount;) {
+      const cell = scheduleData.cells[currentMember.id][slot];
+
+      if (!cell || slotToColumn[slot] === undefined) {
+        slot++;
+        continue;
+      }
+
+      let end = slot + 1;
+
+      while (
+        end < scheduleData.slotCount &&
+        slotToColumn[end] !== undefined &&
+        sameCell(
+          cell,
+          scheduleData.cells[currentMember.id][end]
+        )
+      ) {
+        end++;
+      }
+
+      const bar = el(
+        "div",
+        cell.type === "break" ? "break-bar" : "bar"
+      );
+
+      bar.style.gridColumn =
+        `${slotToColumn[slot] + 2} / ` +
+        `${slotToColumn[end - 1] + 3}`;
+
+      const barName = cell.type === "break"
+        ? (cell.breakKind ? "休憩" : "稼働外")
+        : cell.task.name;
+
+      if (cell.type === "break" && !cell.breakKind) {
+        bar.classList.add("unavailable-bar");
+      } else {
+        const text = el("span", "bar-label");
+
+        text.textContent = barName;
+        bar.append(text);
+        bar.dataset.fullLabel = barName;
 
         if (cell.type === "break") {
-          if (cell.breakKind) {
-            bar.textContent = "休憩";
-          } else {
-            bar.classList.add(
-              "unavailable-bar",
-            );
-
-            bar.textContent = "";
-          }
+          bar.dataset.breakLabel = "true";
         } else {
-          bar.textContent =
-            cell.task.name;
-
           bar.style.setProperty(
             "--bar-color",
-            cell.task.color,
+            cell.task.color
           );
         }
 
-        row.append(bar);
+        // カーソルを合わせると内容を表示
+        bar.title =
+          `${barName}\n` +
+          `担当：${currentMember.name}\n` +
+          `${clock(workStart + slot * STEP)} ～ ` +
+          `${clock(workStart + end * STEP)}`;
 
-        slot = endSlot;
+        bar.tabIndex = 0;
+        bar.setAttribute("aria-label", bar.title);
       }
 
-      schedule.append(row);
-    },
-  );
+      row.append(bar);
+      slot = end;
+    }
+
+    schedule.append(row);
+  });
 
   resultArea.append(schedule);
+  requestAnimationFrame(fitScheduleLabels);
 
   if (scheduleData.failed.length) {
-    const unplaced = el(
-      "section",
-      "unplaced",
-    );
+    const unplaced = el("section", "unplaced");
 
-    const items =
-      scheduleData.failed
-        .map(
-          (failedItem) =>
-            "<li><strong>" +
-            escapeHtml(
-              failedItem.task.name,
-            ) +
-            "</strong>：" +
-            escapeHtml(
-              failedItem.reason,
-            ) +
-            "</li>",
-        )
-        .join("");
+    const items = scheduleData.failed
+      .map((failedItem) =>
+        "<li><strong>" +
+        escapeHtml(failedItem.task.name) +
+        "</strong>：" +
+        escapeHtml(failedItem.reason) +
+        "</li>"
+      )
+      .join("");
 
     unplaced.innerHTML =
       "<h3>配置できなかった作業</h3><ul>" +
@@ -3544,10 +2573,7 @@ function draw(
   }
 }
 
-function sameCell(
-  firstCell,
-  secondCell,
-) {
+function sameCell(firstCell, secondCell) {
   if (
     !firstCell ||
     !secondCell ||
@@ -3557,28 +2583,20 @@ function sameCell(
   }
 
   if (firstCell.type === "break") {
-    return (
-      firstCell.breakKind ===
-      secondCell.breakKind
-    );
+    return firstCell.breakKind === secondCell.breakKind;
   }
 
-  return (
-    firstCell.task.id ===
-    secondCell.task.id
-  );
+  return firstCell.task.id === secondCell.task.id;
 }
 
 function parseDateTime(value) {
   const match = String(value || "")
     .trim()
     .match(
-      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})$/,
+      /^(\d{4})[-/](\d{1,2})[-/](\d{1,2})[ T](\d{1,2}):(\d{2})$/
     );
 
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   const year = Number(match[1]);
   const month = Number(match[2]);
@@ -3591,7 +2609,7 @@ function parseDateTime(value) {
     month - 1,
     day,
     hours,
-    minutes,
+    minutes
   );
 
   const isValid =
@@ -3608,44 +2626,29 @@ function toMin(value) {
   const date = parseDateTime(value);
 
   return date
-    ? Math.floor(
-        date.getTime() / 60000,
-      )
+    ? Math.floor(date.getTime() / 60000)
     : null;
 }
 
 function clock(minutes) {
-  const date =
-    new Date(minutes * 60000);
+  const date = new Date(minutes * 60000);
 
   if (isDayMode()) {
     return (
-      String(
-        date.getMonth() + 1,
-      ).padStart(2, "0") +
+      String(date.getMonth() + 1).padStart(2, "0") +
       "/" +
-      String(
-        date.getDate(),
-      ).padStart(2, "0")
+      String(date.getDate()).padStart(2, "0")
     );
   }
 
   return (
-    String(
-      date.getMonth() + 1,
-    ).padStart(2, "0") +
+    String(date.getMonth() + 1).padStart(2, "0") +
     "/" +
-    String(
-      date.getDate(),
-    ).padStart(2, "0") +
+    String(date.getDate()).padStart(2, "0") +
     "\n" +
-    String(
-      date.getHours(),
-    ).padStart(2, "0") +
+    String(date.getHours()).padStart(2, "0") +
     ":" +
-    String(
-      date.getMinutes(),
-    ).padStart(2, "0")
+    String(date.getMinutes()).padStart(2, "0")
   );
 }
 
@@ -3653,21 +2656,13 @@ function localDateTime(date) {
   return (
     date.getFullYear() +
     "-" +
-    String(
-      date.getMonth() + 1,
-    ).padStart(2, "0") +
+    String(date.getMonth() + 1).padStart(2, "0") +
     "-" +
-    String(
-      date.getDate(),
-    ).padStart(2, "0") +
+    String(date.getDate()).padStart(2, "0") +
     " " +
-    String(
-      date.getHours(),
-    ).padStart(2, "0") +
+    String(date.getHours()).padStart(2, "0") +
     ":" +
-    String(
-      date.getMinutes(),
-    ).padStart(2, "0")
+    String(date.getMinutes()).padStart(2, "0")
   );
 }
 
@@ -3679,7 +2674,7 @@ function setDefaultDateTimes() {
     now.getMonth(),
     now.getDate(),
     7,
-    0,
+    0
   );
 
   const defaultEnd = new Date(
@@ -3687,27 +2682,19 @@ function setDefaultDateTimes() {
     now.getMonth(),
     now.getDate(),
     20,
-    0,
+    0
   );
 
-  startEl.value =
-    localDateTime(defaultStart);
-
-  endEl.value =
-    localDateTime(defaultEnd);
+  startEl.value = localDateTime(defaultStart);
+  endEl.value = localDateTime(defaultEnd);
 }
 
-function dateTimeOnWorkDate(
-  timeValue,
-) {
-  const workDate =
-    parseDateTime(startEl.value) ||
-    new Date();
+function dateTimeOnWorkDate(timeValue) {
+  const workDate = parseDateTime(startEl.value) || new Date();
 
-  const [hours, minutes] =
-    timeValue
-      .split(":")
-      .map(Number);
+  const [hours, minutes] = timeValue
+    .split(":")
+    .map(Number);
 
   return localDateTime(
     new Date(
@@ -3715,22 +2702,17 @@ function dateTimeOnWorkDate(
       workDate.getMonth(),
       workDate.getDate(),
       hours,
-      minutes,
-    ),
+      minutes
+    )
   );
 }
 
 function normalizeDateTime(value) {
-  if (
-    /^\d{2}:\d{2}$/.test(
-      value || "",
-    )
-  ) {
+  if (/^\d{2}:\d{2}$/.test(value || "")) {
     return dateTimeOnWorkDate(value);
   }
 
-  const date =
-    parseDateTime(value);
+  const date = parseDateTime(value);
 
   return date
     ? localDateTime(date)
@@ -3738,11 +2720,8 @@ function normalizeDateTime(value) {
 }
 
 function escapeHtml(value) {
-  const element =
-    document.createElement("div");
-
-  element.textContent =
-    String(value);
+  const element = document.createElement("div");
+  element.textContent = String(value);
 
   return element.innerHTML;
 }
@@ -3751,15 +2730,12 @@ function toast(message) {
   const toastElement = $("toast");
 
   toastElement.textContent = message;
-
   toastElement.classList.add("show");
 
   clearTimeout(toast.timer);
 
   toast.timer = setTimeout(() => {
-    toastElement.classList.remove(
-      "show",
-    );
+    toastElement.classList.remove("show");
   }, 2600);
 }
 
@@ -3772,216 +2748,124 @@ function save() {
       baseAvailability,
       scheduleStep,
       members,
-      tasks,
-    }),
+      tasks
+    })
   );
 }
 
 function load() {
   try {
-    const savedData = JSON.parse(
-      localStorage.getItem(STORE),
-    );
+    const savedData = JSON.parse(localStorage.getItem(STORE));
 
-    if (!savedData) {
-      return;
-    }
+    if (!savedData) return;
 
     if (savedData.start) {
-      startEl.value =
-        normalizeDateTime(
-          savedData.start,
-        );
+      startEl.value = normalizeDateTime(savedData.start);
     }
 
     if (savedData.end) {
-      endEl.value =
-        normalizeDateTime(
-          savedData.end,
-        );
+      endEl.value = normalizeDateTime(savedData.end);
     }
 
     if (
       savedData.scheduleStep &&
-      [
-        "minute",
-        "hour",
-        "day",
-      ].includes(
-        savedData.scheduleStep.unit,
+      ["minute", "hour", "day"].includes(
+        savedData.scheduleStep.unit
       )
     ) {
       scheduleStep = {
         value: Math.max(
           1,
           Math.round(
-            Number(
-              savedData.scheduleStep
-                .value,
-            ) || 1,
-          ),
+            Number(savedData.scheduleStep.value) || 1
+          )
         ),
-        unit:
-          savedData.scheduleStep.unit,
+        unit: savedData.scheduleStep.unit
       };
 
-      STEP =
-        stepToMinutes(scheduleStep);
+      STEP = stepToMinutes(scheduleStep);
     }
 
     if (
       savedData.baseAvailability &&
-      timeOnlyToMinutes(
-        savedData.baseAvailability
-          .start,
-      ) !== null &&
-      timeOnlyToMinutes(
-        savedData.baseAvailability.end,
-      ) !== null &&
-      timeOnlyToMinutes(
-        savedData.baseAvailability.end,
-      ) >
-        timeOnlyToMinutes(
-          savedData.baseAvailability
-            .start,
-        )
+      timeOnlyToMinutes(savedData.baseAvailability.start) !== null &&
+      timeOnlyToMinutes(savedData.baseAvailability.end) !== null &&
+      timeOnlyToMinutes(savedData.baseAvailability.end) >
+        timeOnlyToMinutes(savedData.baseAvailability.start)
     ) {
       baseAvailability = {
-        start:
-          savedData.baseAvailability
-            .start,
-        end:
-          savedData.baseAvailability.end,
+        start: savedData.baseAvailability.start,
+        end: savedData.baseAvailability.end
       };
     }
 
-    if (
-      Array.isArray(
-        savedData.members,
-      )
-    ) {
-      members = savedData.members.map(
-        (savedMember) => {
-          const availability =
-            Array.isArray(
-              savedMember.availability,
+    if (Array.isArray(savedData.members)) {
+      members = savedData.members.map((savedMember) => {
+        const availability = Array.isArray(savedMember.availability)
+          ? savedMember.availability
+          : null;
+
+        const oldBreaks = Array.isArray(savedMember.breaks)
+          ? savedMember.breaks
+          : [];
+
+        return {
+          ...member(),
+          ...savedMember,
+
+          availability: (
+            availability !== null
+              ? availability
+              : availabilityFromBreaks(oldBreaks)
+          ).map((item) => ({
+            ...item,
+            start: normalizeDateTime(item.start),
+            end: normalizeDateTime(item.end)
+          })),
+
+          restRules: (
+            Array.isArray(savedMember.restRules)
+              ? savedMember.restRules
+              : []
+          ).map((restRule) => ({
+            id: restRule.id || id(),
+            type:
+              restRule.type === "fixed"
+                ? "fixed"
+                : "flexible",
+            minutes: Math.max(
+              15,
+              Number(restRule.minutes) || 60
+            ),
+            start: normalizeDateTime(
+              restRule.start || dateTimeOnWorkDate("12:00")
+            ),
+            end: normalizeDateTime(
+              restRule.end || dateTimeOnWorkDate("13:00")
             )
-              ? savedMember.availability
-              : null;
+          })),
 
-          const oldBreaks =
-            Array.isArray(
-              savedMember.breaks,
-            )
-              ? savedMember.breaks
-              : [];
-
-          return {
-            ...member(),
-            ...savedMember,
-
-            availability: (
-              availability !== null
-                ? availability
-                : availabilityFromBreaks(
-                    oldBreaks,
-                  )
-            ).map((item) => ({
-              ...item,
-              start:
-                normalizeDateTime(
-                  item.start,
-                ),
-              end:
-                normalizeDateTime(
-                  item.end,
-                ),
-            })),
-
-            restRules: (
-              Array.isArray(
-                savedMember.restRules,
-              )
-                ? savedMember.restRules
-                : []
-            ).map((restRule) => ({
-              id:
-                restRule.id || id(),
-
-              type:
-                restRule.type ===
-                "fixed"
-                  ? "fixed"
-                  : "flexible",
-
-              minutes: Math.max(
-                15,
-                Number(
-                  restRule.minutes,
-                ) || 60,
-              ),
-
-              start:
-                normalizeDateTime(
-                  restRule.start ||
-                    dateTimeOnWorkDate(
-                      "12:00",
-                    ),
-                ),
-
-              end:
-                normalizeDateTime(
-                  restRule.end ||
-                    dateTimeOnWorkDate(
-                      "13:00",
-                    ),
-                ),
-            })),
-
-            breaks: undefined,
-          };
-        },
-      );
+          breaks: undefined
+        };
+      });
     }
 
-    if (
-      Array.isArray(savedData.tasks)
-    ) {
-      tasks = savedData.tasks.map(
-        (savedTask, index) => ({
-          ...task(),
-          ...savedTask,
-
-          start:
-            normalizeDateTime(
-              savedTask.start,
-            ),
-
-          color:
-            savedTask.color ||
-            COLORS[
-              index %
-                COLORS.length
-            ],
-        }),
-      );
+    if (Array.isArray(savedData.tasks)) {
+      tasks = savedData.tasks.map((savedTask, index) => ({
+        ...task(),
+        ...savedTask,
+        start: normalizeDateTime(savedTask.start),
+        color: savedTask.color || COLORS[index % COLORS.length]
+      }));
     }
   } catch (error) {
-    console.warn(
-      "保存データを読み込めませんでした",
-      error,
-    );
+    console.warn("保存データを読み込めませんでした", error);
   }
 }
 
-function availabilityFromBreaks(
-  breaks,
-) {
-  const workStart =
-    toMin(startEl.value);
-
-  const workEnd =
-    toMin(endEl.value);
+function availabilityFromBreaks(breaks) {
+  const workStart = toMin(startEl.value);
+  const workEnd = toMin(endEl.value);
 
   if (
     workStart === null ||
@@ -3993,123 +2877,122 @@ function availabilityFromBreaks(
 
   const normalizedBreaks = breaks
     .map((currentBreak) => ({
-      start: toMin(
-        normalizeDateTime(
-          currentBreak.start,
-        ),
-      ),
-
-      end: toMin(
-        normalizeDateTime(
-          currentBreak.end,
-        ),
-      ),
+      start: toMin(normalizeDateTime(currentBreak.start)),
+      end: toMin(normalizeDateTime(currentBreak.end))
     }))
     .filter(
       (currentBreak) =>
         currentBreak.start !== null &&
         currentBreak.end !== null &&
-        currentBreak.end >
-          currentBreak.start &&
-        currentBreak.end >
-          workStart &&
-        currentBreak.start <
-          workEnd,
+        currentBreak.end > currentBreak.start &&
+        currentBreak.end > workStart &&
+        currentBreak.start < workEnd
     )
     .map((currentBreak) => ({
-      start: Math.max(
-        workStart,
-        currentBreak.start,
-      ),
-
-      end: Math.min(
-        workEnd,
-        currentBreak.end,
-      ),
+      start: Math.max(workStart, currentBreak.start),
+      end: Math.min(workEnd, currentBreak.end)
     }))
     .sort(
       (firstBreak, secondBreak) =>
-        firstBreak.start -
-        secondBreak.start,
+        firstBreak.start - secondBreak.start
     );
 
   const mergedBreaks = [];
 
-  normalizedBreaks.forEach(
-    (currentBreak) => {
-      const previousBreak =
-        mergedBreaks.at(-1);
+  normalizedBreaks.forEach((currentBreak) => {
+    const previousBreak = mergedBreaks.at(-1);
 
-      if (
-        previousBreak &&
-        currentBreak.start <=
-          previousBreak.end
-      ) {
-        previousBreak.end =
-          Math.max(
-            previousBreak.end,
-            currentBreak.end,
-          );
-      } else {
-        mergedBreaks.push({
-          ...currentBreak,
-        });
-      }
-    },
-  );
+    if (
+      previousBreak &&
+      currentBreak.start <= previousBreak.end
+    ) {
+      previousBreak.end = Math.max(
+        previousBreak.end,
+        currentBreak.end
+      );
+    } else {
+      mergedBreaks.push({ ...currentBreak });
+    }
+  });
 
   const availability = [];
-
   let currentStart = workStart;
 
-  mergedBreaks.forEach(
-    (currentBreak) => {
-      if (
-        currentBreak.start >
-        currentStart
-      ) {
-        availability.push({
-          id: id(),
+  mergedBreaks.forEach((currentBreak) => {
+    if (currentBreak.start > currentStart) {
+      availability.push({
+        id: id(),
+        start: localDateTime(
+          new Date(currentStart * 60000)
+        ),
+        end: localDateTime(
+          new Date(currentBreak.start * 60000)
+        )
+      });
+    }
 
-          start: localDateTime(
-            new Date(
-              currentStart * 60000,
-            ),
-          ),
-
-          end: localDateTime(
-            new Date(
-              currentBreak.start *
-                60000,
-            ),
-          ),
-        });
-      }
-
-      currentStart = Math.max(
-        currentStart,
-        currentBreak.end,
-      );
-    },
-  );
+    currentStart = Math.max(currentStart, currentBreak.end);
+  });
 
   if (currentStart < workEnd) {
     availability.push({
       id: id(),
-
       start: localDateTime(
-        new Date(
-          currentStart * 60000,
-        ),
+        new Date(currentStart * 60000)
       ),
-
       end: localDateTime(
-        new Date(
-          workEnd * 60000,
-        ),
-      ),
+        new Date(workEnd * 60000)
+      )
     });
   }
 
   return availability;
 }
+
+/* 狭い休憩バーでは「休」に短縮 */
+function fitScheduleLabels() {
+  resultArea
+    .querySelectorAll("[data-break-label]")
+    .forEach((bar) => {
+      const labelElement = bar.querySelector(".bar-label");
+
+      labelElement.textContent = "休憩";
+
+      if (labelElement.scrollWidth > bar.clientWidth - 10) {
+        labelElement.textContent = "休";
+      }
+    });
+}
+
+/* 横軸の幅を調整 */
+const axisZoom = $("axisZoom");
+
+axisZoom.addEventListener("input", () => {
+  $("axisZoomValue").textContent = `${axisZoom.value}px`;
+
+  const schedule = resultArea.querySelector(".schedule");
+
+  if (schedule) {
+    const flags = schedule.style
+      .getPropertyValue("--print-tracks")
+      .match(/14px|minmax\(0, 1fr\)/g) || [];
+
+    schedule.style.setProperty(
+      "--axis-tracks",
+      flags
+        .map((flag) =>
+          flag === "14px"
+            ? "28px"
+            : `${axisZoom.value}px`
+        )
+        .join(" ")
+    );
+
+    fitScheduleLabels();
+  }
+});
+
+const scheduleLabelObserver =
+  new ResizeObserver(fitScheduleLabels);
+
+scheduleLabelObserver.observe(resultArea);
